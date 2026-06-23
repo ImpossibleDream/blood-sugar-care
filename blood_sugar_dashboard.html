@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>血糖数据监测系统</title>
+<script src="echarts.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ========================================================================
+   Magazine Editorial · Health Data Dashboard
+   Design: Warm editorial, data-journalism aesthetic
+   Fonts: Jost (display) + DM Sans (body)
+   ======================================================================== */
+
+:root {
+  --bg-page: #f5f2ec;
+  --bg-card: #ffffff;
+  --bg-subtle: #edebe6;
+  --bg-hover: #f0eee8;
+  --text-primary: #1d1b1b;
+  --text-secondary: #6b6864;
+  --text-muted: #9a9690;
+  --accent-gold: #c49a3c;
+  --accent-teal: #4a7c7c;
+  --alert-red: #c44a4a;
+  --alert-amber: #c49a3c;
+  --alert-green: #3d8a6a;
+  --border-light: rgba(29,27,27,0.07);
+  --border-med: rgba(29,27,27,0.12);
+  --shadow-card: 0 2px 12px rgba(29,27,27,0.05);
+  --shadow-hover: 0 6px 28px rgba(29,27,27,0.09);
+  --font-display: 'Jost', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --transition: 0.25s cubic-bezier(0.22,1,0.36,1);
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+
+body{
+  font-family:var(--font-body),"PingFang SC","Microsoft YaHei",sans-serif;
+  background:var(--bg-page);
+  color:var(--text-primary);
+  min-height:100vh;
+  position:relative;
+  -webkit-font-smoothing:antialiased
+}
+
+/* Noise texture */
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  pointer-events:none;
+  z-index:9999
+}
+
+/* Ambient light */
+body::after{
+  content:'';
+  position:fixed;
+  top:-20%;right:-15%;
+  width:50%;height:60%;
+  background:radial-gradient(ellipse,rgba(196,154,60,0.06) 0%,transparent 70%);
+  pointer-events:none;
+  z-index:-1
+}
+
+/* Animations */
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(12px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+/* Tab bar */
+.tab-bar{
+  display:flex;
+  background:rgba(255,255,255,0.92);
+  border-bottom:1px solid var(--border-light);
+  position:sticky;
+  top:0;
+  z-index:100;
+  padding:0 24px;
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px)
+}
+.tab-btn{
+  padding:16px 28px;
+  font-size:13px;
+  font-weight:500;
+  font-family:var(--font-display);
+  letter-spacing:0.02em;
+  color:var(--text-muted);
+  cursor:pointer;
+  border:none;
+  background:none;
+  transition:color var(--transition),border-color var(--transition);
+  border-bottom:2px solid transparent;
+  position:relative
+}
+.tab-btn:hover{color:var(--text-primary)}
+.tab-btn.active{
+  color:var(--accent-gold);
+  border-bottom-color:var(--accent-gold)
+}
+
+/* Pages */
+.page{display:none;padding:24px 28px;max-width:1500px;margin:0 auto}
+.page.active{display:block;animation:fadeUp 0.45s cubic-bezier(0.22,1,0.36,1)}
+
+/* Header */
+.header{margin-bottom:20px}
+.header h1{
+  font-family:var(--font-display);
+  font-size:20px;
+  font-weight:600;
+  letter-spacing:0.01em;
+  color:var(--text-primary);
+  line-height:1.3
+}
+.header .sub{
+  font-size:12px;
+  color:var(--text-muted);
+  margin-top:3px;
+  letter-spacing:0.01em
+}
+
+/* KPI row */
+.kpi-row{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:10px;
+  margin-bottom:18px
+}
+.kpi-card{
+  background:var(--bg-card);
+  border-radius:var(--radius-md);
+  padding:14px 16px;
+  box-shadow:var(--shadow-card);
+  transition:box-shadow var(--transition),transform var(--transition);
+  border:1px solid var(--border-light)
+}
+.kpi-card:hover{
+  box-shadow:var(--shadow-hover);
+  transform:translateY(-2px)
+}
+.kpi-card .lab{
+  font-size:10px;
+  font-family:var(--font-display);
+  font-weight:500;
+  letter-spacing:0.05em;
+  text-transform:uppercase;
+  color:var(--text-muted);
+  margin-bottom:3px
+}
+.kpi-card .val{
+  font-size:22px;
+  font-weight:600;
+  font-family:var(--font-display);
+  color:var(--text-primary);
+  line-height:1.2
+}
+.kpi-card .chg{
+  font-size:10px;
+  color:var(--text-muted);
+  margin-top:3px
+}
+
+/* Dashboard grid */
+.db-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  margin-bottom:14px
+}
+.db-grid .fw{grid-column:1/-1}
+
+/* Cards */
+.card{
+  background:var(--bg-card);
+  border-radius:var(--radius-lg);
+  padding:18px;
+  box-shadow:var(--shadow-card);
+  display:flex;
+  flex-direction:column;
+  border:1px solid var(--border-light);
+  transition:box-shadow var(--transition);
+  overflow:hidden
+}
+.card:hover{box-shadow:var(--shadow-hover)}
+.card h3{
+  font-family:var(--font-display);
+  font-size:12px;
+  font-weight:600;
+  letter-spacing:0.03em;
+  color:var(--text-secondary);
+  margin-bottom:10px;
+  text-transform:uppercase
+}
+.card .ch{width:100%;flex:1;min-height:200px}
+.card .nt{
+  font-size:11px;
+  color:var(--text-muted);
+  margin-top:8px;
+  padding:8px 12px;
+  background:var(--bg-subtle);
+  border-radius:var(--radius-sm);
+  border-left:2px solid var(--accent-gold);
+  line-height:1.5;
+  flex-shrink:0
+}
+
+/* Table */
+.tbl{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
+.tbl th{
+  background:var(--bg-subtle);
+  padding:5px 10px;
+  text-align:left;
+  font-weight:600;
+  font-family:var(--font-display);
+  font-size:10px;
+  letter-spacing:0.03em;
+  text-transform:uppercase;
+  color:var(--text-secondary);
+  border-bottom:1px solid var(--border-light)
+}
+.tbl td{
+  padding:5px 10px;
+  border-bottom:1px solid var(--border-light);
+  color:var(--text-primary)
+}
+
+/* Info boxes */
+.info-row-4{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr 1fr;
+  gap:10px
+}
+.info-row-4 .bx{
+  background:var(--bg-subtle);
+  border-radius:var(--radius-md);
+  padding:12px
+}
+.info-row-4 .bx h4{
+  font-family:var(--font-display);
+  font-size:11px;
+  font-weight:600;
+  letter-spacing:0.03em;
+  text-transform:uppercase;
+  color:var(--text-secondary);
+  margin-bottom:4px
+}
+.info-row-4 .bx p{
+  font-size:11px;
+  color:var(--text-secondary);
+  line-height:1.6
+}
+.info-row-4 .bx .hl{color:var(--accent-gold);font-weight:600}
+
+/* Filter bar */
+.filter-bar{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin-bottom:14px;
+  background:var(--bg-card);
+  padding:12px 18px;
+  border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-card);
+  border:1px solid var(--border-light)
+}
+.filter-bar label,.add-form label{
+  font-size:11px;
+  font-family:var(--font-display);
+  font-weight:500;
+  letter-spacing:0.02em;
+  color:var(--text-muted);
+  text-transform:uppercase
+}
+.filter-bar input,.filter-bar select,.add-form input,.add-form select{
+  padding:6px 10px;
+  font-size:12px;
+  border:1px solid var(--border-med);
+  border-radius:var(--radius-sm);
+  outline:none;
+  background:var(--bg-page);
+  color:var(--text-primary);
+  font-family:var(--font-body);
+  transition:border-color var(--transition),box-shadow var(--transition)
+}
+.filter-bar input:focus,.filter-bar select:focus,.add-form input:focus,.add-form select:focus{
+  border-color:var(--accent-gold);
+  box-shadow:0 0 0 2px rgba(196,154,60,0.15)
+}
+
+/* Buttons */
+.btn{
+  padding:6px 16px;
+  font-size:11px;
+  font-family:var(--font-display);
+  font-weight:500;
+  letter-spacing:0.03em;
+  border:none;
+  border-radius:var(--radius-sm);
+  cursor:pointer;
+  transition:all var(--transition);
+  text-transform:uppercase
+}
+.btn-primary{background:var(--accent-gold);color:#fff}
+.btn-primary:hover{background:#b0882e}
+.btn-outline{background:transparent;color:var(--accent-gold);border:1px solid var(--accent-gold)}
+.btn-outline:hover{background:var(--accent-gold);color:#fff}
+
+/* Add form */
+.add-form{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin-bottom:14px;
+  background:var(--bg-card);
+  padding:12px 18px;
+  border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-card);
+  border:1px solid var(--border-light)
+}
+
+/* Records table */
+.records-wrap{
+  background:var(--bg-card);
+  border-radius:var(--radius-lg);
+  padding:18px;
+  box-shadow:var(--shadow-card);
+  border:1px solid var(--border-light);
+  overflow-x:auto
+}
+.records-table{width:100%;border-collapse:collapse;font-size:13px}
+.records-table th{
+  background:var(--bg-subtle);
+  padding:9px 14px;
+  text-align:left;
+  font-weight:600;
+  font-family:var(--font-display);
+  font-size:10px;
+  letter-spacing:0.04em;
+  text-transform:uppercase;
+  color:var(--text-secondary);
+  border-bottom:2px solid var(--border-med);
+  white-space:nowrap
+}
+.records-table td{
+  padding:8px 14px;
+  border-bottom:1px solid var(--border-light);
+  color:var(--text-primary)
+}
+.records-table tr:hover{background:var(--bg-hover)}
+.records-table .act-btn{
+  padding:3px 10px;
+  font-size:10px;
+  font-family:var(--font-display);
+  letter-spacing:0.02em;
+  border:none;
+  border-radius:var(--radius-sm);
+  cursor:pointer;
+  margin:0 2px;
+  transition:all var(--transition);
+  text-transform:uppercase;
+  font-weight:500
+}
+.records-table .act-edit{background:rgba(74,124,124,0.1);color:var(--accent-teal)}
+.records-table .act-edit:hover{background:rgba(74,124,124,0.2)}
+.records-table .act-del{background:rgba(196,74,74,0.1);color:var(--alert-red)}
+.records-table .act-del:hover{background:rgba(196,74,74,0.2)}
+.tag-high{color:var(--alert-red);font-weight:600;font-size:11px}
+.tag-low{color:var(--alert-amber);font-weight:600;font-size:11px}
+.tag-inj-bg{background:rgba(74,124,124,0.1);padding:2px 8px;border-radius:var(--radius-sm);font-size:10px;font-family:var(--font-display);font-weight:500;letter-spacing:0.02em;color:var(--accent-teal);text-transform:uppercase}
+
+/* Pagination */
+.pagination{display:flex;gap:6px;align-items:center;margin-top:14px;flex-wrap:wrap;justify-content:center}
+.pagination button{padding:5px 12px;font-size:11px;font-family:var(--font-display);font-weight:500;border:1px solid var(--border-med);border-radius:var(--radius-sm);cursor:pointer;background:transparent;color:var(--text-secondary);transition:all var(--transition)}
+.pagination button:hover{background:var(--bg-subtle);border-color:var(--accent-gold);color:var(--accent-gold)}
+.pagination button.active{background:var(--accent-gold);color:#fff;border-color:var(--accent-gold)}
+.pagination .info{font-size:11px;color:var(--text-muted);margin:0 8px}
+.pagination button:disabled{opacity:.35;cursor:default;pointer-events:none}
+
+/* Report */
+.report-page{max-width:1000px;margin:0 auto}
+.report-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:18px;background:var(--bg-card);padding:14px 20px;border-radius:var(--radius-lg);box-shadow:var(--shadow-card);border:1px solid var(--border-light)}
+.report-actions label{font-size:11px;font-family:var(--font-display);font-weight:500;letter-spacing:0.02em;color:var(--text-muted);text-transform:uppercase}
+.report-actions input{padding:6px 10px;font-size:12px;border:1px solid var(--border-med);border-radius:var(--radius-sm);outline:none;background:var(--bg-page);color:var(--text-primary);font-family:var(--font-body);transition:border-color var(--transition)}
+.report-actions input:focus{border-color:var(--accent-gold)}
+.report-charts .card{margin-bottom:16px}
+.report-charts .card .ch{width:100%;flex:1;min-height:250px}
+.report-stat{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:18px}
+.report-stat .kpi-card{padding:12px 14px}
+
+/* Modal */
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(29,27,27,0.45);z-index:200;justify-content:center;align-items:center;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.modal-overlay.show{display:flex}
+.modal-box{background:var(--bg-card);border-radius:var(--radius-lg);padding:28px;width:380px;max-width:90vw;box-shadow:0 12px 40px rgba(29,27,27,0.2);animation:fadeUp 0.3s cubic-bezier(0.22,1,0.36,1)}
+.modal-box h3{font-family:var(--font-display);font-size:16px;font-weight:600;margin-bottom:18px;color:var(--text-primary)}
+.modal-box label{display:block;font-size:10px;font-family:var(--font-display);font-weight:500;letter-spacing:0.03em;text-transform:uppercase;color:var(--text-muted);margin-bottom:3px;margin-top:10px}
+.modal-box input,.modal-box select{width:100%;padding:8px 12px;font-size:13px;border:1px solid var(--border-med);border-radius:var(--radius-sm);outline:none;background:var(--bg-page);color:var(--text-primary);font-family:var(--font-body)}
+.modal-box input:focus,.modal-box select:focus{border-color:var(--accent-gold)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+.modal-actions .btn{padding:8px 22px;font-size:11px}
+.modal-actions .btn-primary{background:var(--accent-gold);color:#fff}
+.modal-actions .btn-primary:hover{background:#b0882e}
+.modal-actions .btn-cancel{background:transparent;color:var(--text-secondary);border:1px solid var(--border-med)}
+.modal-actions .btn-cancel:hover{background:var(--bg-subtle)}
+
+/* Footer */
+.footer{text-align:center;font-size:10px;font-family:var(--font-display);letter-spacing:0.05em;text-transform:uppercase;color:var(--text-muted);padding:16px 0}
+
+/* Misc */
+.card .ch canvas{display:block}
+
+/* Responsive */
+@media(max-width:900px){.db-grid{grid-template-columns:1fr}.filter-bar,.add-form{flex-direction:column;align-items:stretch}.info-row-4{grid-template-columns:1fr 1fr}.tab-bar{padding:0 10px}.page{padding:16px}}
+@media(max-width:600px){.tab-btn{padding:14px 16px;font-size:12px}.info-row-4{grid-template-columns:1fr}}
+
+/* Print */
+@media print{body{background:#fff}body::before,body::after{display:none}.tab-bar,.filter-bar,.add-form,.report-actions,.pagination{display:none!important}.page{display:block!important;padding:0}.db-grid{grid-template-columns:1fr 1fr;break-inside:avoid}.card{break-inside:avoid;box-shadow:none;border:1px solid #ddd}}
+</style>
+</head>
+<body>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab(0)">📋 记录明细</button>
+  <button class="tab-btn" onclick="switchTab(1)">📊 看板</button>
+  <button class="tab-btn" onclick="switchTab(2)">📄 报告</button>
+</div>
+
+<div class="page active" id="page0">
+  <div class="header"><h1>📋 血糖数据 · 记录明细</h1></div>
+  <div class="filter-bar">
+    <label>日期从</label>
+    <input type="date" id="filterDateFrom" onchange="applyFilter()">
+    <label>至</label>
+    <input type="date" id="filterDateTo" onchange="applyFilter()">
+    <label style="margin-left:6px">时段</label>
+    <select id="filterSlot" onchange="applyFilter()">
+      <option value="-1">全部时段</option>
+      <option value="0">空腹</option>
+      <option value="1">早餐后2小时</option>
+      <option value="2">午餐前</option>
+      <option value="3">午餐后2小时</option>
+      <option value="4">晚餐前</option>
+      <option value="5">晚餐后2小时</option>
+      <option value="6">凌晨3:00</option>
+      <option value="7">注射剂量</option>
+    </select>
+    <button class="btn btn-outline" onclick="resetFilter()">↺ 重置</button>
+    <button class="btn btn-outline" onclick="exportCSV()" style="margin-left:auto">⬇ 导出CSV</button>
+  </div>
+  <div class="add-form">
+    <label>日期</label>
+    <input type="date" id="addDate">
+    <label>时段</label>
+    <select id="addSlot">
+      <option value="0">空腹</option>
+      <option value="1">早餐后2小时</option>
+      <option value="2">午餐前</option>
+      <option value="3">午餐后2小时</option>
+      <option value="4">晚餐前</option>
+      <option value="5">晚餐后2小时</option>
+      <option value="6">凌晨3:00</option>
+      <option value="7">注射剂量</option>
+    </select>
+    <label>数值 (mmol/L)</label>
+    <input type="number" id="addValue" step="0.1" min="0" max="30" placeholder="如 5.2">
+    <button class="btn btn-primary" onclick="addRecord()">添加</button>
+  </div>
+  <div class="records-wrap">
+    <div id="recordsHeader" style="font-size:12px;color:#888;margin-bottom:8px"></div>
+    <table class="records-table">
+      <thead><tr>
+        <th style="width:110px">日期</th>
+        <th style="width:100px">时段</th>
+        <th style="width:90px">数值(mmol/L)</th>
+        <th style="width:80px">标记</th>
+        <th style="width:120px">操作</th>
+      </tr></thead>
+      <tbody id="recordsBody"></tbody>
+    </table>
+    <div class="pagination" id="pagination"></div>
+  </div>
+</div>
+
+<div class="page" id="page1">
+  <div class="dashboard">
+    <div class="header"><h1>📊 健康数据监测 · 运营看板</h1><div class="sub">血糖数据监测系统 · 个人预警阈值版 · 2025.12 — 至今</div></div>
+    <div class="kpi-row" id="kpiRow"></div>
+    <div class="db-grid">
+      <div class="card fw"><h3>📈 月度血糖均值趋势</h3><div class="ch" id="c1"></div><div class="nt">包含凌晨3:00记录，空腹血糖从12月6.37降至5月4.78（↓25%）。</div></div>
+      <div class="card"><h3>⚖️ 双轨预警对比</h3><div class="ch" id="c2"></div><div class="nt">个人阈值比医学标准（4.4-7.0/&lt;10.0）严格约20-50%。</div></div>
+      <div class="card"><h3>🚦 各时段预警占比（个人阈值）</h3><div class="ch" id="c3"></div><div class="nt">凌晨3:00正常率最高，晚餐前偏高率38.2%。</div></div>
+      <div class="card"><h3>💉 注射剂量 vs 空腹血糖</h3><div class="ch" id="c4"></div><div class="nt">1.2mg稳定160天，空腹持续低于5.3。</div></div>
+      <div class="card"><h3>📊 各时段血糖分布</h3><div class="ch" id="c5"></div><div class="nt">凌晨3:00最稳定，早餐后波动最大。</div></div>
+      <div class="card" style="display:flex;flex-direction:column">
+        <h3>⚠️ 极值记录与异常溯源</h3>
+        <div id="extremeBox" style="margin-bottom:6px;flex-shrink:0"></div>
+        <div class="ch" id="c6" style="flex:1"></div>
+      </div>
+      <!-- 4 info boxes stacked in right column of same grid -->
+      <div style="grid-column:2;display:flex;flex-direction:column;gap:10px;background:#fff;border-radius:8px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.06)">
+        <div style="flex:1"><h4 style="font-size:12px;font-weight:600;margin-bottom:3px">双轨预警设计</h4><p style="font-size:11px;color:#444;line-height:1.5"><span style="color:#6366f1;font-weight:600">医学标准</span>（4.4-7.0 / &lt;10.0）：达标率95%。<br><span style="color:#6366f1;font-weight:600">个人预警</span>（3.9-6.1 / 3.9-7.8）：前置识别20-50%。</p></div>
+        <div style="flex:1"><h4 style="font-size:12px;font-weight:600;margin-bottom:3px">剂量调整数据闭环</h4><p style="font-size:11px;color:#444;line-height:1.5">1.2mg稳定期160天，空腹血糖持续低于5.3。</p></div>
+        <div style="flex:1"><h4 style="font-size:12px;font-weight:600;margin-bottom:3px">数据采集评估</h4><p style="font-size:11px;color:#444;line-height:1.5">空腹和3:00记录最完整(~85%)，晚餐前仅65%。</p></div>
+        <div style="flex:1"><h4 style="font-size:12px;font-weight:600;margin-bottom:3px">作品集价值定位</h4><p style="font-size:11px;color:#444;line-height:1.5">双轨预警数据监测系统，半年运营积累1,138条有效数据。</p></div>
+      </div>
+    </div>
+    <div style="text-align:center;font-size:11px;color:#999;padding:12px 0;grid-column:1/-1">数据运营作品集 · 2026 · 个人预警阈值版</div>
+  </div>
+</div>
+
+<div class="page" id="page2">
+  <div class="report-page">
+    <div class="header"><h1>📄 血糖数据报告 · PDF生成</h1><div class="sub">选择日期范围，预览后生成可下载PDF报告（无乱码）</div></div>
+    <div class="report-actions">
+      <label>日期从</label>
+      <input type="date" id="rptFrom">
+      <label>至</label>
+      <input type="date" id="rptTo">
+      <button class="btn btn-primary" onclick="previewReport()">刷新预览</button>
+      <button class="btn btn-primary" onclick="genPDF()" style="background:#059669">生成PDF报告</button>
+    </div>
+    <div class="report-stat" id="rptStat"></div>
+    <div class="report-charts" id="rptCharts"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="editModal">
+  <div class="modal-box">
+    <h3>✏️ 编辑记录</h3>
+    <label>日期</label>
+    <input type="date" id="editDate">
+    <label>时段</label>
+    <select id="editSlot">
+      <option value="0">空腹</option>
+      <option value="1">早餐后2小时</option>
+      <option value="2">午餐前</option>
+      <option value="3">午餐后2小时</option>
+      <option value="4">晚餐前</option>
+      <option value="5">晚餐后2小时</option>
+      <option value="6">凌晨3:00</option>
+      <option value="7">注射剂量</option>
+      <option value="7">注射剂量</option>
+    </select>
+    <label>数值 (mmol/L)</label>
+    <input type="number" id="editValue" step="0.1" min="0" max="30">
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeEditModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveEdit()">保存</button>
+    </div>
+  </div>
+</div>
+<script>
+// ---- Embedded Data ----
+const SLOT_NAMES = ["空腹", "早餐后2小时", "午餐前", "午餐后2小时", "晚餐前", "晚餐后2小时", "3:00"];
+const _ORIGINAL_RECORDS = [["2025-12-17", 4, 14.1], ["2025-12-17", 5, 13.5], ["2025-12-17", 6, 6.2], ["2025-12-18", 0, 8.6], ["2025-12-18", 1, 10.8], ["2025-12-18", 2, 6.1], ["2025-12-18", 3, 11.7], ["2025-12-18", 4, 5.9], ["2025-12-18", 5, 10.0], ["2025-12-18", 6, 4.8], ["2025-12-19", 0, 6.0], ["2025-12-19", 1, 14.4], ["2025-12-19", 2, 8.1], ["2025-12-19", 3, 5.3], ["2025-12-19", 4, 4.7], ["2025-12-19", 5, 8.9], ["2025-12-19", 6, 7.2], ["2025-12-20", 0, 5.7], ["2025-12-20", 1, 9.7], ["2025-12-20", 2, 12.8], ["2025-12-20", 3, 7.9], ["2025-12-20", 4, 5.8], ["2025-12-20", 5, 6.9], ["2025-12-20", 6, 7.5], ["2025-12-21", 0, 6.9], ["2025-12-21", 1, 10.9], ["2025-12-21", 2, 6.1], ["2025-12-21", 3, 6.4], ["2025-12-21", 4, 6.1], ["2025-12-21", 5, 9.4], ["2025-12-22", 0, 6.8], ["2025-12-22", 2, 4.8], ["2025-12-22", 3, 8.2], ["2025-12-22", 4, 8.9], ["2025-12-22", 5, 7.7], ["2025-12-22", 6, 4.9], ["2025-12-23", 0, 8.2], ["2025-12-23", 1, 9.4], ["2025-12-23", 2, 4.8], ["2025-12-23", 3, 6.9], ["2025-12-23", 4, 7.4], ["2025-12-23", 5, 7.5], ["2025-12-23", 6, 5.8], ["2025-12-24", 0, 6.4], ["2025-12-24", 1, 8.0], ["2025-12-24", 2, 5.6], ["2025-12-24", 3, 4.9], ["2025-12-24", 4, 6.0], ["2025-12-24", 5, 8.9], ["2025-12-24", 6, 5.5], ["2025-12-25", 0, 5.5], ["2025-12-25", 1, 5.2], ["2025-12-25", 2, 5.1], ["2025-12-25", 3, 7.3], ["2025-12-25", 4, 6.5], ["2025-12-25", 5, 7.1], ["2025-12-25", 6, 5.9], ["2025-12-26", 0, 6.5], ["2025-12-26", 1, 9.6], ["2025-12-26", 2, 5.6], ["2025-12-26", 3, 8.3], ["2025-12-26", 4, 8.2], ["2025-12-26", 5, 7.0], ["2025-12-26", 6, 5.2], ["2025-12-27", 0, 6.2], ["2025-12-27", 1, 9.4], ["2025-12-27", 2, 5.6], ["2025-12-27", 3, 8.6], ["2025-12-27", 4, 5.6], ["2025-12-27", 5, 9.6], ["2025-12-27", 6, 5.8], ["2025-12-28", 0, 5.8], ["2025-12-28", 1, 9.7], ["2025-12-28", 2, 5.2], ["2025-12-28", 3, 8.7], ["2025-12-28", 4, 9.0], ["2025-12-28", 5, 9.0], ["2025-12-28", 6, 5.7], ["2025-12-29", 0, 5.8], ["2025-12-29", 1, 7.0], ["2025-12-29", 2, 6.4], ["2025-12-29", 3, 6.8], ["2025-12-29", 4, 6.6], ["2025-12-29", 5, 6.6], ["2025-12-29", 6, 5.6], ["2025-12-30", 0, 5.5], ["2025-12-30", 1, 7.2], ["2025-12-30", 2, 5.4], ["2025-12-30", 3, 6.3], ["2025-12-30", 4, 7.0], ["2025-12-30", 5, 8.7], ["2025-12-30", 6, 4.9], ["2025-12-31", 0, 5.3], ["2025-12-31", 1, 7.2], ["2025-12-31", 2, 5.8], ["2025-12-31", 3, 6.7], ["2025-12-31", 4, 6.3], ["2025-12-31", 5, 9.9], ["2025-12-31", 6, 5.4], ["2026-01-01", 0, 5.8], ["2026-01-01", 1, 7.3], ["2026-01-01", 2, 6.0], ["2026-01-01", 3, 5.8], ["2026-01-01", 4, 5.5], ["2026-01-01", 5, 6.1], ["2026-01-01", 6, 5.0], ["2026-01-02", 0, 5.5], ["2026-01-02", 1, 6.2], ["2026-01-02", 2, 6.7], ["2026-01-02", 3, 5.3], ["2026-01-02", 4, 6.5], ["2026-01-02", 5, 8.3], ["2026-01-02", 6, 5.5], ["2026-01-03", 0, 5.6], ["2026-01-03", 1, 7.4], ["2026-01-03", 2, 6.2], ["2026-01-03", 3, 5.5], ["2026-01-03", 4, 5.9], ["2026-01-03", 5, 8.3], ["2026-01-03", 6, 5.3], ["2026-01-04", 0, 5.0], ["2026-01-04", 1, 8.9], ["2026-01-04", 2, 6.3], ["2026-01-04", 3, 8.1], ["2026-01-04", 4, 5.6], ["2026-01-04", 5, 7.0], ["2026-01-04", 6, 5.4], ["2026-01-05", 0, 5.9], ["2026-01-05", 1, 8.7], ["2026-01-05", 2, 6.5], ["2026-01-05", 3, 6.7], ["2026-01-05", 4, 5.9], ["2026-01-05", 5, 9.3], ["2026-01-05", 6, 5.6], ["2026-01-06", 0, 5.7], ["2026-01-06", 1, 9.0], ["2026-01-06", 2, 6.9], ["2026-01-06", 3, 7.5], ["2026-01-06", 4, 6.5], ["2026-01-06", 5, 7.4], ["2026-01-06", 6, 5.4], ["2026-01-07", 0, 5.8], ["2026-01-07", 1, 7.5], ["2026-01-07", 5, 6.8], ["2026-01-07", 6, 3.9], ["2026-01-08", 0, 5.8], ["2026-01-08", 1, 7.3], ["2026-01-08", 2, 6.8], ["2026-01-08", 3, 6.2], ["2026-01-08", 4, 5.8], ["2026-01-08", 5, 7.6], ["2026-01-08", 6, 4.5], ["2026-01-09", 0, 5.9], ["2026-01-09", 1, 9.1], ["2026-01-09", 2, 5.4], ["2026-01-09", 3, 7.4], ["2026-01-09", 4, 7.7], ["2026-01-09", 5, 8.4], ["2026-01-09", 6, 4.6], ["2026-01-10", 0, 6.8], ["2026-01-10", 1, 6.8], ["2026-01-10", 2, 6.8], ["2026-01-10", 3, 6.4], ["2026-01-10", 4, 6.6], ["2026-01-10", 5, 7.7], ["2026-01-10", 6, 5.4], ["2026-01-11", 0, 6.1], ["2026-01-11", 1, 10.3], ["2026-01-11", 2, 6.0], ["2026-01-11", 3, 7.4], ["2026-01-11", 4, 6.7], ["2026-01-11", 5, 5.9], ["2026-01-11", 6, 6.3], ["2026-01-12", 0, 6.1], ["2026-01-12", 1, 8.7], ["2026-01-12", 2, 7.3], ["2026-01-12", 3, 10.7], ["2026-01-12", 4, 7.2], ["2026-01-12", 5, 7.0], ["2026-01-12", 6, 6.0], ["2026-01-13", 0, 6.7], ["2026-01-13", 1, 8.0], ["2026-01-13", 2, 6.5], ["2026-01-13", 3, 7.6], ["2026-01-13", 4, 5.6], ["2026-01-13", 5, 6.4], ["2026-01-13", 6, 6.4], ["2026-01-14", 0, 6.9], ["2026-01-14", 1, 7.8], ["2026-01-14", 2, 7.4], ["2026-01-14", 3, 10.7], ["2026-01-14", 4, 7.0], ["2026-01-14", 5, 7.5], ["2026-01-14", 6, 6.8], ["2026-01-15", 0, 6.8], ["2026-01-15", 1, 9.0], ["2026-01-15", 2, 7.9], ["2026-01-15", 3, 8.3], ["2026-01-15", 4, 6.1], ["2026-01-15", 5, 7.6], ["2026-01-15", 6, 6.8], ["2026-01-16", 0, 7.5], ["2026-01-16", 1, 8.9], ["2026-01-16", 2, 7.6], ["2026-01-16", 3, 11.5], ["2026-01-16", 4, 6.6], ["2026-01-16", 5, 7.9], ["2026-01-16", 6, 6.7], ["2026-01-17", 0, 7.1], ["2026-01-17", 1, 9.6], ["2026-01-17", 2, 7.4], ["2026-01-17", 3, 7.6], ["2026-01-17", 6, 6.7], ["2026-01-18", 0, 6.4], ["2026-01-18", 1, 7.4], ["2026-01-18", 2, 7.2], ["2026-01-18", 3, 8.6], ["2026-01-18", 5, 7.0], ["2026-01-18", 6, 6.2], ["2026-01-19", 0, 6.9], ["2026-01-19", 1, 9.7], ["2026-01-19", 2, 7.9], ["2026-01-19", 3, 9.5], ["2026-01-19", 4, 6.5], ["2026-01-19", 5, 7.4], ["2026-01-19", 6, 6.2], ["2026-01-20", 0, 6.6], ["2026-01-20", 1, 9.9], ["2026-01-20", 2, 8.1], ["2026-01-20", 3, 11.4], ["2026-01-20", 4, 6.7], ["2026-01-20", 5, 6.8], ["2026-01-20", 6, 6.8], ["2026-01-21", 0, 6.8], ["2026-01-21", 1, 8.2], ["2026-01-21", 2, 7.2], ["2026-01-21", 3, 8.5], ["2026-01-21", 4, 6.2], ["2026-01-21", 5, 6.8], ["2026-01-21", 6, 6.3], ["2026-01-22", 0, 6.2], ["2026-01-22", 1, 10.6], ["2026-01-22", 2, 8.0], ["2026-01-22", 3, 8.7], ["2026-01-22", 4, 6.1], ["2026-01-22", 5, 4.0], ["2026-01-23", 5, 6.0], ["2026-01-23", 6, 3.9], ["2026-01-24", 0, 5.1], ["2026-01-24", 1, 8.3], ["2026-01-24", 2, 5.3], ["2026-01-24", 3, 6.8], ["2026-01-24", 4, 6.3], ["2026-01-24", 5, 7.0], ["2026-01-24", 6, 5.6], ["2026-01-25", 0, 6.0], ["2026-01-25", 1, 6.8], ["2026-01-25", 2, 5.8], ["2026-01-25", 3, 6.2], ["2026-01-25", 6, 5.2], ["2026-01-26", 0, 4.8], ["2026-01-26", 1, 6.7], ["2026-01-26", 2, 5.7], ["2026-01-26", 3, 6.8], ["2026-01-26", 4, 7.5], ["2026-01-26", 5, 8.1], ["2026-01-26", 6, 4.9], ["2026-01-27", 0, 5.6], ["2026-01-27", 1, 6.8], ["2026-01-27", 2, 6.1], ["2026-01-27", 3, 7.9], ["2026-01-27", 4, 5.0], ["2026-01-27", 5, 6.7], ["2026-01-27", 6, 5.1], ["2026-01-28", 0, 5.1], ["2026-01-28", 1, 8.2], ["2026-01-28", 2, 8.1], ["2026-01-28", 3, 7.9], ["2026-01-28", 4, 6.9], ["2026-01-28", 5, 7.3], ["2026-01-28", 6, 5.7], ["2026-01-29", 0, 5.6], ["2026-01-29", 1, 7.2], ["2026-01-29", 2, 5.5], ["2026-01-29", 3, 8.5], ["2026-01-29", 4, 6.0], ["2026-01-29", 5, 8.7], ["2026-01-29", 6, 5.3], ["2026-01-30", 0, 5.5], ["2026-01-30", 1, 7.4], ["2026-01-30", 2, 5.8], ["2026-01-30", 3, 5.4], ["2026-01-30", 5, 6.1], ["2026-01-30", 6, 5.3], ["2026-01-31", 0, 5.8], ["2026-01-31", 1, 9.8], ["2026-01-31", 2, 5.6], ["2026-01-31", 3, 5.8], ["2026-01-31", 4, 6.6], ["2026-01-31", 5, 6.2], ["2026-01-31", 6, 5.1], ["2026-02-01", 0, 5.5], ["2026-02-01", 1, 8.0], ["2026-02-01", 2, 6.9], ["2026-02-01", 3, 6.3], ["2026-02-01", 4, 6.9], ["2026-02-01", 5, 7.0], ["2026-02-01", 6, 6.1], ["2026-02-02", 0, 5.8], ["2026-02-02", 1, 6.2], ["2026-02-02", 2, 6.4], ["2026-02-02", 3, 6.8], ["2026-02-02", 4, 6.6], ["2026-02-02", 5, 7.2], ["2026-02-02", 6, 6.5], ["2026-02-03", 0, 6.2], ["2026-02-03", 1, 6.8], ["2026-02-03", 2, 6.0], ["2026-02-03", 3, 7.8], ["2026-02-03", 6, 6.4], ["2026-02-04", 0, 7.0], ["2026-02-04", 1, 7.7], ["2026-02-04", 2, 5.8], ["2026-02-04", 6, 5.4], ["2026-02-05", 0, 5.5], ["2026-02-05", 1, 6.2], ["2026-02-05", 2, 6.4], ["2026-02-05", 4, 5.9], ["2026-02-05", 5, 6.6], ["2026-02-05", 6, 6.8], ["2026-02-06", 0, 6.1], ["2026-02-06", 1, 6.4], ["2026-02-06", 4, 6.2], ["2026-02-06", 5, 6.7], ["2026-02-06", 6, 6.0], ["2026-02-07", 0, 6.3], ["2026-02-07", 1, 6.5], ["2026-02-07", 4, 6.8], ["2026-02-07", 6, 2.6], ["2026-02-08", 0, 3.9], ["2026-02-08", 1, 6.6], ["2026-02-08", 2, 4.2], ["2026-02-08", 3, 5.1], ["2026-02-08", 4, 4.9], ["2026-02-08", 6, 4.0], ["2026-02-09", 0, 4.3], ["2026-02-09", 1, 5.2], ["2026-02-09", 2, 4.9], ["2026-02-09", 3, 5.1], ["2026-02-09", 6, 4.4], ["2026-02-10", 0, 4.2], ["2026-02-10", 1, 4.6], ["2026-02-10", 2, 4.9], ["2026-02-10", 3, 5.7], ["2026-02-10", 4, 5.3], ["2026-02-10", 5, 4.1], ["2026-02-10", 6, 4.5], ["2026-02-11", 0, 5.0], ["2026-02-11", 1, 4.8], ["2026-02-11", 2, 4.8], ["2026-02-11", 3, 4.5], ["2026-02-11", 4, 4.2], ["2026-02-11", 5, 4.8], ["2026-02-11", 6, 3.8], ["2026-02-12", 0, 4.6], ["2026-02-12", 1, 4.7], ["2026-02-12", 2, 4.6], ["2026-02-12", 3, 5.1], ["2026-02-12", 4, 4.7], ["2026-02-12", 5, 5.9], ["2026-02-12", 6, 4.2], ["2026-02-13", 0, 4.6], ["2026-02-13", 1, 5.3], ["2026-02-13", 2, 6.1], ["2026-02-13", 3, 5.6], ["2026-02-13", 6, 4.4], ["2026-02-14", 0, 5.0], ["2026-02-14", 1, 5.1], ["2026-02-14", 4, 4.8], ["2026-02-14", 5, 5.8], ["2026-02-14", 6, 4.5], ["2026-02-15", 0, 5.1], ["2026-02-15", 1, 5.0], ["2026-02-15", 4, 4.8], ["2026-02-15", 5, 5.8], ["2026-02-15", 6, 5.0], ["2026-02-16", 0, 4.9], ["2026-02-16", 1, 4.9], ["2026-02-16", 2, 5.0], ["2026-02-16", 3, 6.8], ["2026-02-16", 4, 5.8], ["2026-02-16", 5, 5.2], ["2026-02-16", 6, 4.6], ["2026-02-17", 0, 4.7], ["2026-02-17", 1, 7.0], ["2026-02-17", 2, 4.6], ["2026-02-17", 3, 5.1], ["2026-02-17", 6, 4.6], ["2026-02-18", 2, 4.7], ["2026-02-18", 3, 5.2], ["2026-02-18", 6, 5.0], ["2026-02-19", 0, 4.8], ["2026-02-19", 1, 5.1], ["2026-02-19", 2, 5.1], ["2026-02-19", 3, 4.8], ["2026-02-19", 6, 4.7], ["2026-02-20", 0, 4.5], ["2026-02-20", 1, 4.8], ["2026-02-20", 2, 6.0], ["2026-02-20", 6, 5.0], ["2026-02-21", 0, 5.1], ["2026-02-21", 1, 5.6], ["2026-02-21", 2, 5.0], ["2026-02-21", 3, 5.7], ["2026-02-21", 6, 5.0], ["2026-02-22", 0, 5.0], ["2026-02-22", 1, 6.2], ["2026-02-22", 2, 4.9], ["2026-02-22", 3, 5.6], ["2026-02-22", 6, 5.4], ["2026-02-23", 4, 3.7], ["2026-02-23", 5, 5.4], ["2026-02-23", 6, 5.2], ["2026-02-24", 0, 5.6], ["2026-02-24", 1, 5.6], ["2026-02-24", 4, 4.9], ["2026-02-24", 5, 6.9], ["2026-02-24", 6, 4.5], ["2026-02-25", 0, 5.5], ["2026-02-25", 1, 7.2], ["2026-02-25", 2, 6.3], ["2026-02-25", 3, 6.6], ["2026-02-25", 4, 8.6], ["2026-02-25", 5, 6.1], ["2026-02-25", 6, 4.6], ["2026-02-26", 0, 5.8], ["2026-02-26", 1, 5.9], ["2026-02-26", 2, 6.1], ["2026-02-26", 3, 6.6], ["2026-02-26", 4, 6.6], ["2026-02-26", 5, 7.5], ["2026-02-26", 6, 6.5], ["2026-02-27", 0, 5.8], ["2026-02-27", 1, 6.2], ["2026-02-27", 2, 6.7], ["2026-02-27", 3, 6.6], ["2026-02-27", 4, 6.9], ["2026-02-27", 5, 6.3], ["2026-02-27", 6, 5.7], ["2026-02-28", 0, 6.2], ["2026-02-28", 1, 6.3], ["2026-02-28", 2, 6.3], ["2026-02-28", 3, 8.3], ["2026-02-28", 4, 6.9], ["2026-02-28", 5, 6.9], ["2026-02-28", 6, 5.9], ["2026-03-01", 0, 6.2], ["2026-03-01", 1, 6.7], ["2026-03-01", 4, 7.0], ["2026-03-01", 5, 7.1], ["2026-03-01", 6, 6.0], ["2026-03-02", 0, 6.4], ["2026-03-02", 1, 7.7], ["2026-03-02", 2, 7.3], ["2026-03-02", 3, 8.6], ["2026-03-02", 4, 7.0], ["2026-03-02", 5, 6.3], ["2026-03-02", 6, 9.2], ["2026-03-03", 0, 8.2], ["2026-03-03", 1, 8.0], ["2026-03-03", 2, 6.5], ["2026-03-03", 3, 7.4], ["2026-03-03", 4, 6.7], ["2026-03-03", 5, 7.4], ["2026-03-03", 6, 6.4], ["2026-03-04", 0, 6.3], ["2026-03-04", 1, 6.2], ["2026-03-04", 2, 6.3], ["2026-03-04", 3, 6.4], ["2026-03-04", 4, 6.2], ["2026-03-04", 5, 8.1], ["2026-03-04", 6, 6.4], ["2026-03-05", 0, 6.3], ["2026-03-05", 1, 6.7], ["2026-03-05", 2, 6.1], ["2026-03-05", 3, 7.5], ["2026-03-05", 4, 7.4], ["2026-03-05", 5, 7.9], ["2026-03-05", 6, 6.3], ["2026-03-06", 0, 6.6], ["2026-03-06", 1, 6.9], ["2026-03-06", 2, 6.2], ["2026-03-06", 3, 8.7], ["2026-03-06", 6, 6.6], ["2026-03-07", 0, 7.0], ["2026-03-07", 1, 6.7], ["2026-03-07", 2, 6.0], ["2026-03-07", 3, 6.2], ["2026-03-07", 4, 6.3], ["2026-03-07", 5, 6.4], ["2026-03-07", 6, 6.4], ["2026-03-08", 0, 6.5], ["2026-03-08", 1, 9.5], ["2026-03-08", 2, 6.2], ["2026-03-08", 3, 8.7], ["2026-03-08", 6, 6.3], ["2026-03-09", 0, 6.7], ["2026-03-09", 1, 10.2], ["2026-03-09", 2, 7.7], ["2026-03-09", 3, 8.0], ["2026-03-09", 4, 8.4], ["2026-03-09", 5, 9.3], ["2026-03-09", 6, 6.8], ["2026-03-10", 0, 7.2], ["2026-03-10", 1, 8.7], ["2026-03-10", 2, 6.8], ["2026-03-10", 6, 4.6], ["2026-03-11", 0, 4.0], ["2026-03-11", 1, 6.0], ["2026-03-11", 2, 5.1], ["2026-03-11", 3, 5.8], ["2026-03-11", 4, 5.2], ["2026-03-11", 5, 6.2], ["2026-03-11", 6, 4.5], ["2026-03-12", 0, 4.5], ["2026-03-12", 1, 4.6], ["2026-03-12", 2, 4.4], ["2026-03-12", 3, 4.8], ["2026-03-12", 4, 5.8], ["2026-03-12", 5, 5.6], ["2026-03-12", 6, 4.9], ["2026-03-13", 0, 4.3], ["2026-03-13", 1, 5.6], ["2026-03-13", 2, 4.6], ["2026-03-13", 3, 5.6], ["2026-03-13", 4, 5.0], ["2026-03-13", 5, 6.5], ["2026-03-13", 6, 4.4], ["2026-03-14", 0, 4.2], ["2026-03-14", 1, 5.0], ["2026-03-14", 2, 4.5], ["2026-03-14", 3, 6.0], ["2026-03-14", 6, 4.8], ["2026-03-15", 0, 4.4], ["2026-03-15", 1, 4.8], ["2026-03-15", 2, 4.8], ["2026-03-15", 3, 4.6], ["2026-03-15", 6, 4.1], ["2026-03-16", 0, 4.3], ["2026-03-16", 1, 7.4], ["2026-03-16", 2, 4.8], ["2026-03-16", 3, 6.3], ["2026-03-16", 4, 6.4], ["2026-03-16", 5, 5.8], ["2026-03-16", 6, 4.4], ["2026-03-17", 0, 4.7], ["2026-03-17", 1, 6.1], ["2026-03-17", 2, 4.7], ["2026-03-17", 3, 5.3], ["2026-03-17", 4, 6.1], ["2026-03-17", 5, 6.8], ["2026-03-17", 6, 4.2], ["2026-03-18", 0, 4.4], ["2026-03-18", 1, 5.4], ["2026-03-18", 2, 4.6], ["2026-03-18", 3, 4.9], ["2026-03-18", 4, 4.5], ["2026-03-18", 5, 6.5], ["2026-03-18", 6, 5.2], ["2026-03-19", 0, 4.5], ["2026-03-19", 1, 6.3], ["2026-03-19", 2, 4.6], ["2026-03-19", 3, 5.0], ["2026-03-19", 4, 4.5], ["2026-03-19", 5, 4.9], ["2026-03-19", 6, 4.2], ["2026-03-20", 0, 4.1], ["2026-03-20", 1, 6.4], ["2026-03-20", 2, 4.8], ["2026-03-20", 3, 5.0], ["2026-03-20", 4, 5.8], ["2026-03-20", 5, 4.6], ["2026-03-20", 6, 4.5], ["2026-03-21", 0, 4.3], ["2026-03-21", 1, 6.8], ["2026-03-21", 4, 5.6], ["2026-03-21", 5, 4.8], ["2026-03-21", 6, 4.0], ["2026-03-22", 0, 3.2], ["2026-03-22", 1, 5.4], ["2026-03-22", 2, 3.8], ["2026-03-22", 3, 4.9], ["2026-03-22", 4, 4.4], ["2026-03-22", 5, 4.7], ["2026-03-22", 6, 3.9], ["2026-03-23", 0, 3.7], ["2026-03-23", 1, 6.5], ["2026-03-23", 2, 4.4], ["2026-03-23", 3, 4.6], ["2026-03-23", 4, 5.0], ["2026-03-23", 5, 6.1], ["2026-03-23", 6, 4.3], ["2026-03-24", 0, 2.9], ["2026-03-24", 1, 5.4], ["2026-03-24", 2, 4.3], ["2026-03-24", 3, 5.5], ["2026-03-24", 4, 4.1], ["2026-03-24", 5, 5.2], ["2026-03-24", 6, 4.3], ["2026-03-25", 0, 3.0], ["2026-03-25", 1, 5.1], ["2026-03-25", 2, 3.6], ["2026-03-25", 3, 5.7], ["2026-03-25", 4, 4.8], ["2026-03-25", 5, 4.4], ["2026-03-25", 6, 5.0], ["2026-03-26", 3, 6.5], ["2026-03-26", 4, 4.7], ["2026-03-26", 5, 5.9], ["2026-03-26", 6, 5.6], ["2026-03-27", 0, 5.0], ["2026-03-27", 1, 4.4], ["2026-03-27", 2, 4.4], ["2026-03-27", 3, 5.0], ["2026-03-27", 4, 4.7], ["2026-03-27", 5, 4.7], ["2026-03-27", 6, 5.0], ["2026-03-28", 0, 5.3], ["2026-03-28", 1, 5.7], ["2026-03-28", 2, 5.5], ["2026-03-28", 3, 5.9], ["2026-03-28", 4, 6.0], ["2026-03-28", 5, 7.5], ["2026-03-28", 6, 5.1], ["2026-03-29", 0, 5.0], ["2026-03-29", 1, 8.0], ["2026-03-29", 2, 5.0], ["2026-03-29", 3, 5.8], ["2026-03-29", 4, 5.3], ["2026-03-29", 5, 7.7], ["2026-03-29", 6, 5.4], ["2026-03-30", 0, 5.6], ["2026-03-30", 1, 9.9], ["2026-03-30", 2, 4.9], ["2026-03-30", 3, 5.7], ["2026-03-30", 4, 5.7], ["2026-03-30", 5, 6.7], ["2026-03-30", 6, 4.9], ["2026-03-31", 0, 4.7], ["2026-03-31", 1, 8.2], ["2026-03-31", 2, 6.9], ["2026-03-31", 3, 6.6], ["2026-03-31", 6, 5.2], ["2026-04-01", 0, 5.4], ["2026-04-01", 1, 5.8], ["2026-04-01", 2, 5.8], ["2026-04-01", 3, 5.8], ["2026-04-01", 4, 6.2], ["2026-04-01", 5, 4.9], ["2026-04-01", 6, 6.0], ["2026-04-02", 0, 5.0], ["2026-04-02", 1, 8.3], ["2026-04-02", 2, 5.7], ["2026-04-02", 3, 7.0], ["2026-04-02", 4, 7.2], ["2026-04-02", 5, 5.7], ["2026-04-02", 6, 5.2], ["2026-04-03", 0, 4.9], ["2026-04-03", 1, 7.3], ["2026-04-03", 2, 5.5], ["2026-04-03", 3, 5.9], ["2026-04-03", 6, 5.4], ["2026-04-04", 0, 4.6], ["2026-04-04", 1, 8.1], ["2026-04-04", 2, 5.2], ["2026-04-04", 3, 7.4], ["2026-04-04", 5, 5.5], ["2026-04-04", 6, 5.5], ["2026-04-05", 0, 5.1], ["2026-04-05", 1, 7.4], ["2026-04-05", 2, 5.3], ["2026-04-05", 3, 6.9], ["2026-04-05", 4, 6.3], ["2026-04-05", 5, 7.4], ["2026-04-05", 6, 6.0], ["2026-04-06", 0, 5.0], ["2026-04-06", 1, 5.6], ["2026-04-06", 2, 5.5], ["2026-04-06", 3, 5.7], ["2026-04-06", 6, 5.1], ["2026-04-07", 0, 4.9], ["2026-04-07", 1, 7.1], ["2026-04-07", 2, 5.5], ["2026-04-07", 3, 9.4], ["2026-04-07", 6, 5.7], ["2026-04-08", 0, 5.0], ["2026-04-08", 1, 6.6], ["2026-04-08", 2, 5.5], ["2026-04-08", 3, 7.0], ["2026-04-08", 4, 6.2], ["2026-04-08", 5, 9.0], ["2026-04-08", 6, 5.8], ["2026-04-09", 0, 5.2], ["2026-04-09", 1, 6.1], ["2026-04-09", 2, 6.8], ["2026-04-09", 3, 9.8], ["2026-04-09", 5, 6.1], ["2026-04-09", 6, 5.1], ["2026-04-10", 0, 4.6], ["2026-04-10", 1, 8.1], ["2026-04-10", 2, 5.2], ["2026-04-10", 6, 5.7], ["2026-04-11", 0, 5.9], ["2026-04-11", 1, 10.4], ["2026-04-11", 2, 5.7], ["2026-04-11", 3, 5.7], ["2026-04-11", 4, 5.7], ["2026-04-11", 5, 6.6], ["2026-04-11", 6, 5.6], ["2026-04-12", 0, 5.6], ["2026-04-12", 1, 9.0], ["2026-04-12", 2, 5.8], ["2026-04-12", 3, 6.3], ["2026-04-12", 5, 5.7], ["2026-04-12", 6, 5.6], ["2026-04-13", 0, 5.8], ["2026-04-13", 1, 7.9], ["2026-04-13", 2, 6.9], ["2026-04-13", 4, 6.1], ["2026-04-13", 5, 6.9], ["2026-04-13", 6, 6.9], ["2026-04-14", 0, 5.8], ["2026-04-14", 1, 7.6], ["2026-04-14", 2, 5.7], ["2026-04-14", 3, 7.7], ["2026-04-14", 4, 6.6], ["2026-04-14", 5, 7.4], ["2026-04-14", 6, 5.5], ["2026-04-15", 0, 5.5], ["2026-04-15", 1, 6.6], ["2026-04-15", 2, 6.0], ["2026-04-15", 3, 7.2], ["2026-04-15", 4, 6.1], ["2026-04-15", 5, 6.7], ["2026-04-15", 6, 5.4], ["2026-04-16", 0, 5.2], ["2026-04-16", 1, 7.7], ["2026-04-16", 2, 5.8], ["2026-04-16", 3, 9.2], ["2026-04-16", 4, 6.2], ["2026-04-16", 5, 5.9], ["2026-04-16", 6, 5.1], ["2026-04-17", 0, 5.2], ["2026-04-17", 1, 8.6], ["2026-04-17", 5, 5.5], ["2026-04-17", 6, 5.6], ["2026-04-18", 0, 5.6], ["2026-04-18", 1, 9.1], ["2026-04-18", 2, 6.3], ["2026-04-18", 3, 6.0], ["2026-04-18", 6, 5.8], ["2026-04-19", 0, 6.0], ["2026-04-19", 1, 9.0], ["2026-04-19", 2, 5.6], ["2026-04-19", 3, 6.8], ["2026-04-19", 5, 6.3], ["2026-04-19", 6, 5.9], ["2026-04-20", 0, 6.0], ["2026-04-20", 1, 9.8], ["2026-04-20", 2, 5.8], ["2026-04-20", 3, 9.3], ["2026-04-20", 6, 5.8], ["2026-04-21", 0, 6.6], ["2026-04-21", 1, 7.5], ["2026-04-21", 2, 7.4], ["2026-04-21", 3, 8.8], ["2026-04-21", 4, 6.0], ["2026-04-21", 5, 8.5], ["2026-04-21", 6, 6.9], ["2026-04-22", 0, 5.8], ["2026-04-22", 1, 5.9], ["2026-04-22", 2, 5.9], ["2026-04-22", 3, 6.6], ["2026-04-22", 6, 5.7], ["2026-04-23", 0, 5.1], ["2026-04-23", 1, 5.9], ["2026-04-23", 4, 4.6], ["2026-04-23", 5, 8.0], ["2026-04-23", 6, 4.7], ["2026-04-24", 0, 4.3], ["2026-04-24", 1, 7.7], ["2026-04-24", 2, 7.0], ["2026-04-24", 3, 6.8], ["2026-04-24", 4, 5.9], ["2026-04-24", 5, 7.8], ["2026-04-24", 6, 5.3], ["2026-04-25", 0, 4.0], ["2026-04-25", 1, 6.3], ["2026-04-25", 2, 4.4], ["2026-04-25", 3, 9.8], ["2026-04-25", 4, 4.8], ["2026-04-25", 5, 3.4], ["2026-04-25", 6, 2.0], ["2026-04-26", 0, 2.0], ["2026-04-26", 1, 2.5], ["2026-04-26", 2, 4.6], ["2026-04-26", 3, 6.1], ["2026-04-26", 6, 5.3], ["2026-04-27", 0, 5.2], ["2026-04-27", 1, 5.4], ["2026-04-27", 2, 6.9], ["2026-04-27", 5, 7.2], ["2026-04-27", 6, 6.0], ["2026-04-28", 0, 4.2], ["2026-04-28", 1, 4.8], ["2026-04-28", 2, 5.9], ["2026-04-28", 3, 6.7], ["2026-04-28", 4, 5.4], ["2026-04-28", 5, 7.1], ["2026-04-28", 6, 6.4], ["2026-04-29", 0, 6.1], ["2026-04-29", 1, 6.1], ["2026-04-29", 2, 5.9], ["2026-04-29", 3, 6.5], ["2026-04-29", 6, 5.5], ["2026-04-30", 0, 5.8], ["2026-04-30", 1, 6.2], ["2026-04-30", 2, 6.3], ["2026-04-30", 3, 9.5], ["2026-04-30", 4, 6.5], ["2026-04-30", 5, 8.3], ["2026-04-30", 6, 5.6], ["2026-05-01", 0, 6.0], ["2026-05-01", 1, 5.7], ["2026-05-01", 2, 5.7], ["2026-05-01", 3, 7.9], ["2026-05-01", 4, 7.0], ["2026-05-01", 5, 7.6], ["2026-05-01", 6, 5.8], ["2026-05-02", 0, 5.7], ["2026-05-02", 1, 7.1], ["2026-05-02", 2, 6.0], ["2026-05-02", 3, 7.7], ["2026-05-02", 6, 5.8], ["2026-05-03", 0, 6.2], ["2026-05-03", 1, 7.0], ["2026-05-03", 2, 5.6], ["2026-05-03", 3, 8.9], ["2026-05-03", 4, 5.9], ["2026-05-03", 5, 9.6], ["2026-05-03", 6, 5.6], ["2026-05-04", 0, 5.5], ["2026-05-04", 1, 5.1], ["2026-05-04", 2, 5.2], ["2026-05-04", 6, 5.6], ["2026-05-05", 0, 4.6], ["2026-05-05", 1, 6.0], ["2026-05-05", 2, 6.6], ["2026-05-05", 3, 6.0], ["2026-05-05", 4, 6.0], ["2026-05-05", 5, 7.5], ["2026-05-05", 6, 4.7], ["2026-05-06", 0, 4.9], ["2026-05-06", 1, 9.3], ["2026-05-06", 4, 5.6], ["2026-05-06", 5, 8.4], ["2026-05-06", 6, 4.8], ["2026-05-07", 0, 3.7], ["2026-05-07", 1, 5.1], ["2026-05-07", 2, 5.0], ["2026-05-07", 3, 7.5], ["2026-05-07", 4, 3.6], ["2026-05-07", 5, 5.9], ["2026-05-07", 6, 4.2], ["2026-05-08", 0, 3.7], ["2026-05-08", 1, 5.0], ["2026-05-08", 2, 4.2], ["2026-05-08", 3, 7.9], ["2026-05-08", 4, 4.3], ["2026-05-08", 5, 4.0], ["2026-05-08", 6, 4.5], ["2026-05-09", 0, 4.3], ["2026-05-09", 1, 7.4], ["2026-05-09", 2, 3.6], ["2026-05-09", 3, 8.1], ["2026-05-09", 4, 2.8], ["2026-05-09", 5, 4.6], ["2026-05-09", 6, 4.4], ["2026-05-10", 0, 3.1], ["2026-05-10", 1, 5.7], ["2026-05-10", 2, 3.0], ["2026-05-10", 5, 4.3], ["2026-05-10", 6, 4.3], ["2026-05-11", 0, 4.8], ["2026-05-11", 1, 7.0], ["2026-05-11", 2, 5.1], ["2026-05-11", 3, 6.9], ["2026-05-11", 4, 4.8], ["2026-05-11", 5, 6.1], ["2026-05-11", 6, 4.6], ["2026-05-12", 0, 5.0], ["2026-05-12", 1, 5.2], ["2026-05-12", 2, 5.3], ["2026-05-12", 3, 6.8], ["2026-05-12", 4, 6.3], ["2026-05-12", 5, 4.6], ["2026-05-12", 6, 5.2], ["2026-05-13", 0, 4.9], ["2026-05-13", 1, 4.9], ["2026-05-13", 2, 4.4], ["2026-05-13", 3, 6.3], ["2026-05-13", 6, 4.2], ["2026-05-14", 0, 4.7], ["2026-05-14", 1, 6.9], ["2026-05-14", 2, 4.3], ["2026-05-14", 3, 7.6], ["2026-05-14", 4, 4.1], ["2026-05-14", 5, 6.9], ["2026-05-14", 6, 4.5], ["2026-05-15", 0, 4.5], ["2026-05-15", 1, 6.8], ["2026-05-15", 2, 5.1], ["2026-05-15", 3, 6.0], ["2026-05-15", 4, 4.3], ["2026-05-15", 5, 6.8], ["2026-05-15", 6, 5.2], ["2026-05-16", 0, 5.0], ["2026-05-16", 1, 5.2], ["2026-05-16", 2, 4.7], ["2026-05-16", 3, 6.0], ["2026-05-16", 6, 4.1], ["2026-05-17", 0, 4.8], ["2026-05-17", 1, 6.6], ["2026-05-17", 2, 5.8], ["2026-05-17", 3, 4.3], ["2026-05-17", 4, 4.8], ["2026-05-17", 5, 9.4], ["2026-05-17", 6, 3.9], ["2026-05-18", 0, 4.3], ["2026-05-18", 1, 5.8], ["2026-05-18", 2, 4.4], ["2026-05-18", 3, 4.6], ["2026-05-18", 4, 5.0], ["2026-05-18", 5, 4.5], ["2026-05-18", 6, 4.8], ["2026-05-19", 0, 4.8], ["2026-05-19", 1, 5.0], ["2026-05-19", 2, 4.1], ["2026-05-19", 3, 6.5], ["2026-05-19", 4, 4.7], ["2026-05-19", 5, 5.2], ["2026-05-19", 6, 3.7], ["2026-05-20", 0, 4.1], ["2026-05-20", 1, 5.3], ["2026-05-20", 2, 4.1], ["2026-05-20", 3, 5.7], ["2026-05-20", 4, 4.9], ["2026-05-20", 5, 3.7], ["2026-05-20", 6, 4.1], ["2026-05-21", 0, 3.9], ["2026-05-21", 1, 6.2], ["2026-05-21", 2, 4.4], ["2026-05-21", 3, 7.4], ["2026-05-21", 4, 4.9], ["2026-05-21", 5, 5.9], ["2026-05-21", 6, 4.4], ["2026-05-22", 0, 3.9], ["2026-05-22", 1, 4.3], ["2026-05-22", 2, 3.7], ["2026-05-22", 3, 6.8], ["2026-05-22", 4, 4.3], ["2026-05-22", 5, 6.2], ["2026-05-22", 6, 4.0], ["2026-05-23", 0, 4.1], ["2026-05-23", 1, 7.4], ["2026-05-23", 2, 4.5], ["2026-05-23", 3, 6.2], ["2026-05-23", 4, 4.4], ["2026-05-23", 5, 7.6], ["2026-05-23", 6, 4.9], ["2026-05-24", 0, 4.1], ["2026-05-24", 1, 4.6], ["2026-05-24", 2, 4.0], ["2026-05-24", 3, 5.6], ["2026-05-24", 4, 3.6], ["2026-05-24", 5, 5.5], ["2026-05-24", 6, 3.8], ["2026-05-25", 0, 3.8], ["2026-05-25", 1, 4.0], ["2026-05-25", 2, 4.0], ["2026-05-25", 3, 7.8], ["2026-05-25", 4, 4.7], ["2026-05-25", 5, 3.1], ["2026-05-26", 1, 5.7], ["2026-05-26", 2, 5.3], ["2026-05-26", 3, 8.2], ["2026-05-26", 4, 5.6], ["2026-05-26", 5, 8.5], ["2026-05-26", 6, 4.7], ["2026-05-27", 0, 5.5], ["2026-05-27", 1, 8.1], ["2026-05-27", 2, 5.3], ["2026-05-27", 3, 8.8], ["2026-05-27", 4, 6.3], ["2026-05-27", 5, 8.2], ["2026-05-27", 6, 6.3], ["2026-05-28", 0, 5.8], ["2026-05-28", 1, 6.5], ["2026-05-28", 2, 6.0], ["2026-05-28", 3, 8.8], ["2026-05-28", 4, 5.2], ["2026-05-28", 5, 9.0], ["2026-05-28", 6, 6.0], ["2026-05-29", 0, 5.6], ["2026-05-29", 1, 7.1], ["2026-05-29", 2, 5.9], ["2026-05-29", 3, 9.4], ["2026-05-29", 4, 5.3], ["2026-05-29", 5, 6.5], ["2026-05-29", 6, 6.5], ["2026-05-30", 0, 6.2], ["2026-05-30", 1, 5.6], ["2026-05-30", 2, 6.1], ["2026-05-30", 3, 6.5], ["2026-05-30", 6, 6.0], ["2026-05-31", 0, 5.8], ["2026-05-31", 1, 8.6], ["2026-05-31", 2, 6.0], ["2026-05-31", 3, 8.0], ["2026-05-31", 6, 6.0], ["2026-06-01", 0, 5.6], ["2026-06-01", 1, 7.7], ["2026-06-01", 2, 5.5], ["2026-06-01", 3, 10.0], ["2026-06-01", 4, 6.6], ["2026-06-01", 5, 7.2], ["2026-06-01", 6, 5.9], ["2026-06-02", 0, 5.5], ["2026-06-02", 1, 7.4], ["2026-06-02", 2, 6.4], ["2026-06-02", 3, 9.3], ["2026-06-02", 4, 5.3], ["2026-06-02", 5, 8.9], ["2026-06-02", 6, 5.5], ["2026-06-03", 0, 5.9], ["2026-06-03", 1, 6.5], ["2026-06-03", 2, 5.2], ["2026-06-03", 3, 7.9], ["2026-06-03", 4, 5.2], ["2026-06-03", 5, 6.7], ["2026-06-03", 6, 7.0], ["2026-06-04", 0, 6.2], ["2026-06-04", 1, 6.2], ["2026-06-04", 2, 6.0], ["2026-06-04", 3, 8.2], ["2026-06-04", 4, 5.1], ["2026-06-04", 5, 7.2], ["2026-06-04", 6, 5.9], ["2026-06-05", 0, 6.2], ["2026-06-05", 1, 7.1], ["2026-06-05", 2, 6.0], ["2026-06-05", 3, 8.6], ["2026-06-05", 4, 6.1], ["2026-06-05", 5, 7.8], ["2026-06-05", 6, 7.0], ["2026-06-06", 0, 6.3], ["2026-06-06", 1, 6.1], ["2026-06-06", 2, 5.6], ["2026-06-06", 3, 6.0], ["2026-06-06", 6, 5.6], ["2026-06-07", 0, 6.1], ["2026-06-07", 1, 11.8], ["2026-06-07", 2, 4.8], ["2026-06-07", 3, 10.5], ["2026-06-07", 4, 4.9], ["2026-06-07", 5, 6.1], ["2026-06-07", 6, 5.6], ["2026-06-08", 0, 5.9], ["2026-06-08", 1, 6.9], ["2026-06-08", 2, 5.2], ["2026-06-08", 3, 8.4], ["2026-06-08", 4, 5.8], ["2026-06-08", 5, 8.5], ["2026-06-08", 6, 5.2], ["2026-06-09", 0, 5.3], ["2026-06-09", 1, 6.4], ["2026-06-09", 2, 5.5], ["2026-06-09", 3, 10.6], ["2026-06-09", 4, 5.5], ["2026-06-09", 5, 7.2], ["2026-06-09", 6, 6.4], ["2026-06-10", 0, 5.7], ["2026-06-10", 1, 5.0], ["2026-06-10", 2, 4.4], ["2026-06-10", 3, 6.2], ["2026-06-10", 4, 5.0], ["2026-06-10", 5, 5.8], ["2026-06-10", 6, 4.4], ["2026-06-11", 0, 4.6], ["2026-06-11", 1, 3.9], ["2026-06-11", 2, 4.1], ["2026-06-11", 3, 5.1], ["2026-06-11", 4, 4.9], ["2026-06-11", 5, 5.1], ["2026-06-11", 6, 4.8], ["2026-06-12", 0, 4.5], ["2026-06-12", 1, 3.8], ["2026-06-12", 2, 4.0], ["2026-06-12", 3, 7.0], ["2026-06-12", 4, 3.7], ["2026-06-12", 5, 4.2], ["2026-06-12", 6, 4.1], ["2026-06-13", 0, 4.2], ["2026-06-13", 1, 6.6], ["2026-06-13", 2, 6.0], ["2026-06-13", 3, 4.6], ["2026-06-13", 6, 4.3], ["2026-06-14", 0, 4.2], ["2026-06-14", 1, 6.9], ["2026-06-14", 4, 4.5], ["2026-06-14", 5, 6.8], ["2026-06-14", 6, 5.7], ["2026-06-15", 0, 4.6], ["2026-06-15", 1, 6.3], ["2026-06-15", 2, 3.9], ["2026-06-15", 3, 7.2], ["2026-06-15", 4, 4.7], ["2026-06-15", 5, 6.1], ["2026-06-15", 6, 4.5], ["2026-06-16", 0, 4.3], ["2026-06-16", 1, 5.1], ["2026-06-16", 2, 4.8], ["2026-06-16", 3, 6.3], ["2026-06-16", 4, 6.4], ["2026-06-16", 5, 5.9], ["2026-06-16", 6, 5.8], ["2026-06-17", 0, 4.6], ["2026-06-17", 1, 4.5]];
+const _ORIGINAL_INJECTIONS = {"2025-12-23": 0.6, "2025-12-24": 0.9, "2025-12-25": 0.6, "2025-12-26": 0.9, "2025-12-27": 0.6, "2025-12-28": 0.9, "2025-12-29": 0.6, "2025-12-30": 0.9, "2025-12-31": 0.9, "2026-01-01": 0.9, "2026-01-02": 0.9, "2026-01-03": 0.9, "2026-01-04": 0.9, "2026-01-05": 0.9, "2026-01-06": 1.2, "2026-01-07": 1.2, "2026-01-08": 1.2, "2026-01-09": 1.2, "2026-01-10": 1.2, "2026-01-11": 1.2, "2026-01-12": 1.2, "2026-01-13": 1.2, "2026-01-14": 1.2, "2026-01-15": 1.2, "2026-01-16": 1.2, "2026-01-17": 1.2, "2026-01-18": 1.2, "2026-01-19": 1.2, "2026-01-20": 1.2, "2026-01-21": 1.2, "2026-01-22": 1.2, "2026-01-23": 1.2, "2026-01-24": 1.2, "2026-01-25": 1.2, "2026-01-26": 1.2, "2026-01-27": 1.2, "2026-01-28": 1.2, "2026-01-29": 1.2, "2026-01-30": 1.2, "2026-01-31": 1.2, "2026-02-01": 1.2, "2026-02-02": 1.2, "2026-02-03": 1.2, "2026-02-04": 1.2, "2026-02-05": 1.2, "2026-02-06": 1.2, "2026-02-07": 1.2, "2026-02-08": 1.2, "2026-02-09": 1.2, "2026-02-10": 1.2, "2026-02-11": 1.2, "2026-02-12": 1.2, "2026-02-13": 1.2, "2026-02-14": 1.2, "2026-02-15": 1.2, "2026-02-16": 1.2, "2026-02-17": 1.2, "2026-02-18": 1.2, "2026-02-19": 1.2, "2026-02-20": 1.2, "2026-02-21": 1.2, "2026-02-22": 1.2, "2026-02-23": 1.2, "2026-02-24": 1.2, "2026-02-25": 1.2, "2026-02-26": 1.2, "2026-02-27": 1.2, "2026-02-28": 1.2, "2026-03-01": 1.2, "2026-03-02": 1.2, "2026-03-03": 1.2, "2026-03-04": 1.2, "2026-03-05": 1.2, "2026-03-06": 1.2, "2026-03-07": 1.2, "2026-03-08": 1.2, "2026-03-09": 1.2, "2026-03-10": 1.2, "2026-03-11": 1.2, "2026-03-12": 1.2, "2026-03-13": 1.2, "2026-03-14": 1.2, "2026-03-15": 1.2, "2026-03-16": 1.2, "2026-03-17": 1.2, "2026-03-18": 1.2, "2026-03-19": 1.2, "2026-03-20": 1.2, "2026-03-21": 1.2, "2026-03-22": 1.2, "2026-03-23": 1.2, "2026-03-24": 1.2, "2026-03-25": 1.2, "2026-03-26": 1.2, "2026-03-27": 1.2, "2026-03-28": 1.2, "2026-03-29": 1.2, "2026-03-30": 1.2, "2026-03-31": 1.2, "2026-04-01": 1.2, "2026-04-02": 1.2, "2026-04-03": 1.2, "2026-04-04": 1.2, "2026-04-05": 1.2, "2026-04-06": 1.2, "2026-04-07": 1.2, "2026-04-08": 1.2, "2026-04-09": 1.2, "2026-04-10": 1.2, "2026-04-11": 1.2, "2026-04-12": 1.2, "2026-04-13": 1.2, "2026-04-14": 1.2, "2026-04-15": 1.2, "2026-04-16": 1.2, "2026-04-17": 1.2, "2026-04-18": 1.2, "2026-04-19": 1.2, "2026-04-20": 1.2, "2026-04-21": 1.2, "2026-04-22": 1.2, "2026-04-23": 1.2, "2026-04-24": 1.2, "2026-04-25": 1.2, "2026-04-26": 1.2, "2026-04-27": 1.2, "2026-04-28": 1.2, "2026-04-29": 1.2, "2026-04-30": 1.2, "2026-05-01": 1.2, "2026-05-02": 1.2, "2026-05-03": 1.2, "2026-05-04": 1.2, "2026-05-05": 1.2, "2026-05-06": 1.2, "2026-05-07": 1.2, "2026-05-08": 1.2, "2026-05-09": 1.2, "2026-05-10": 1.2, "2026-05-11": 1.2, "2026-05-12": 1.2, "2026-05-13": 1.2, "2026-05-14": 1.2, "2026-05-15": 1.2, "2026-05-16": 1.2, "2026-05-17": 1.2, "2026-05-18": 1.2, "2026-05-19": 1.2, "2026-05-20": 1.2, "2026-05-21": 1.2, "2026-05-22": 1.2, "2026-05-23": 1.2, "2026-05-24": 1.2, "2026-05-25": 1.2, "2026-05-26": 1.2, "2026-05-27": 1.2, "2026-05-28": 1.2, "2026-05-29": 1.2, "2026-05-30": 1.2, "2026-05-31": 1.2, "2026-06-01": 1.2, "2026-06-02": 1.2, "2026-06-03": 1.2, "2026-06-04": 1.2, "2026-06-05": 1.2, "2026-06-06": 1.2, "2026-06-07": 1.2, "2026-06-08": 1.2, "2026-06-09": 1.2, "2026-06-10": 1.2, "2026-06-11": 1.2, "2026-06-12": 1.2, "2026-06-13": 1.2, "2026-06-14": 1.2, "2026-06-15": 1.1, "2026-06-16": 1.2};
+// ---- localStorage Persistence ----
+function loadSavedData() {
+  try {
+    var savedR = localStorage.getItem('bs_records');
+    var savedI = localStorage.getItem('bs_injections');
+    if (savedR) { RECORDS = JSON.parse(savedR); }
+    else { RECORDS = JSON.parse(JSON.stringify(_ORIGINAL_RECORDS)); }
+    if (savedI) { INJECTIONS = JSON.parse(savedI); }
+    else { INJECTIONS = JSON.parse(JSON.stringify(_ORIGINAL_INJECTIONS)); }
+  } catch(e) {
+    RECORDS = JSON.parse(JSON.stringify(_ORIGINAL_RECORDS));
+    INJECTIONS = JSON.parse(JSON.stringify(_ORIGINAL_INJECTIONS));
+  }
+}
+function saveData() {
+  try {
+    localStorage.setItem('bs_records', JSON.stringify(RECORDS));
+    localStorage.setItem('bs_injections', JSON.stringify(INJECTIONS));
+  } catch(e) {}
+
+
+}
+loadSavedData();
+
+const MONTHS = ["2025-12", "2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06"];
+const MONTH_LABELS = ["2025/12", "2026/01", "2026/02", "2026/03", "2026/04", "2026/05", "2026/06"];
+const SLOT_STATS = [{"total": 177, "avg": 5.36, "personal": {"normal": 130, "low": 9, "high": 38, "normal_pct": 73.4, "low_pct": 5.1, "high_pct": 21.5}, "medical": {"normal": 140, "low": 31, "high": 6, "normal_pct": 79.1, "low_pct": 17.5, "high_pct": 3.4}}, {"total": 177, "avg": 6.97, "personal": {"normal": 127, "low": 2, "high": 48, "normal_pct": 71.8, "low_pct": 1.1, "high_pct": 27.1}, "medical": {"normal": 164, "low": 5, "high": 8, "normal_pct": 92.7, "low_pct": 2.8, "high_pct": 4.5}}, {"total": 166, "avg": 5.67, "personal": {"normal": 154, "low": 5, "high": 7, "normal_pct": 92.8, "low_pct": 3.0, "high_pct": 4.2}, "medical": {"normal": 134, "low": 16, "high": 16, "normal_pct": 80.7, "low_pct": 9.6, "high_pct": 9.6}}, {"total": 158, "avg": 7.03, "personal": {"normal": 110, "low": 0, "high": 48, "normal_pct": 69.6, "low_pct": 0.0, "high_pct": 30.4}, "medical": {"normal": 150, "low": 1, "high": 7, "normal_pct": 94.9, "low_pct": 0.6, "high_pct": 4.4}}, {"total": 136, "avg": 5.85, "personal": {"normal": 125, "low": 5, "high": 6, "normal_pct": 91.9, "low_pct": 3.7, "high_pct": 4.4}, "medical": {"normal": 113, "low": 11, "high": 12, "normal_pct": 83.1, "low_pct": 8.1, "high_pct": 8.8}}, {"total": 145, "avg": 6.8, "personal": {"normal": 111, "low": 3, "high": 31, "normal_pct": 76.6, "low_pct": 2.1, "high_pct": 21.4}, "medical": {"normal": 136, "low": 8, "high": 1, "normal_pct": 93.8, "low_pct": 5.5, "high_pct": 0.7}}, {"total": 179, "avg": 5.32, "personal": {"normal": 173, "low": 5, "high": 1, "normal_pct": 96.6, "low_pct": 2.8, "high_pct": 0.6}, "medical": {"normal": 151, "low": 25, "high": 3, "normal_pct": 84.4, "low_pct": 14.0, "high_pct": 1.7}}];
+const TREND_DATA = {"0": {"2025-12": 6.37, "2026-01": 6.05, "2026-02": 5.27, "2026-03": 5.12, "2026-04": 5.18, "2026-05": 4.78, "2026-06": 5.28}, "1": {"2025-12": 9.12, "2026-01": 8.25, "2026-02": 5.92, "2026-03": 6.68, "2026-04": 7.15, "2026-05": 6.14, "2026-06": 6.36}, "2": {"2025-12": 6.24, "2026-01": 6.69, "2026-02": 5.53, "2026-03": 5.31, "2026-04": 5.85, "2026-05": 4.91, "2026-06": 5.16}, "3": {"2025-12": 7.43, "2026-01": 7.75, "2026-02": 5.96, "2026-03": 6.11, "2026-04": 7.36, "2026-05": 7.08, "2026-06": 7.73}, "4": {"2025-12": 7.21, "2026-01": 6.36, "2026-02": 5.81, "2026-03": 5.7, "2026-04": 5.99, "2026-05": 4.93, "2026-06": 5.26}, "5": {"2025-12": 8.71, "2026-01": 7.15, "2026-02": 6.14, "2026-03": 6.28, "2026-04": 6.66, "2026-05": 6.38, "2026-06": 6.68}, "6": {"2025-12": 5.74, "2026-01": 5.6, "2026-02": 5.05, "2026-03": 5.25, "2026-04": 5.54, "2026-05": 4.89, "2026-06": 5.48}};
+const DOSE_MAP = {"2025-12": 0.63, "2026-01": 0.9, "2026-02": 1.2, "2026-03": 1.2, "2026-04": 1.2, "2026-05": 1.2, "2026-06": 1.2};
+const DOSE_PERIODS = [{"start": "2025-12-23", "end": "2025-12-23", "dose": 0.6, "days": 1}, {"start": "2025-12-24", "end": "2025-12-24", "dose": 0.9, "days": 1}, {"start": "2025-12-25", "end": "2025-12-25", "dose": 0.6, "days": 1}, {"start": "2025-12-26", "end": "2025-12-26", "dose": 0.9, "days": 1}, {"start": "2025-12-27", "end": "2025-12-27", "dose": 0.6, "days": 1}, {"start": "2025-12-28", "end": "2025-12-28", "dose": 0.9, "days": 1}, {"start": "2025-12-29", "end": "2025-12-29", "dose": 0.6, "days": 1}, {"start": "2025-12-30", "end": "2026-01-05", "dose": 0.9, "days": 7}, {"start": "2026-01-06", "end": "2026-06-14", "dose": 1.2, "days": 160}, {"start": "2026-06-15", "end": "2026-06-15", "dose": 1.1, "days": 1}, {"start": "2026-06-16", "end": "2026-06-16", "dose": 1.2, "days": 1}];
+const EXTREME_LOW = [["2026-04-25", 6, 2.0], ["2026-04-26", 0, 2.0], ["2026-04-26", 1, 2.5], ["2026-02-07", 6, 2.6], ["2026-05-09", 4, 2.8]];
+const EXTREME_HIGH = [["2025-12-19", 1, 14.4], ["2025-12-17", 4, 14.1], ["2025-12-17", 5, 13.5], ["2025-12-20", 2, 12.8], ["2026-06-07", 1, 11.8]];
+const SLOT_AVGS = [5.36, 6.97, 5.67, 7.03, 5.85, 6.8, 5.32];
+const OVERALL_MEAN = 6.12;
+const OVERALL_MEDIAN = 5.9;
+const TOTAL_POINTS = 1138;
+const UNIQUE_DATES = 183;
+const INJECTION_COUNT = 176;
+const DATE_MIN = "2025-12-17";
+const DATE_MAX = "2026-06-17";
+
+// ---- App State ----
+let currentPage = 0;
+let filteredRecords = [];
+let currentPageNum = 1;
+const PAGE_SIZE = 40;
+let editIndex = -1;
+
+function getAllRecords() {
+  const result = RECORDS.map((r,i) => ({date:r[0], slotIdx:r[1], value:r[2], isInjection:false, sourceIdx:i}));
+  for (const [date, dose] of Object.entries(INJECTIONS)) {
+    result.push({date, slotIdx:7, value:dose, isInjection:true, sourceIdx:-1});
+  }
+  result.sort((a,b) => b.date.localeCompare(a.date) || a.slotIdx - b.slotIdx);
+  return result;
+}
+
+let dashboardInited = false;
+let reportInited = false;
+
+function switchTab(idx) {
+  currentPage = idx;
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', i===idx));
+  document.querySelectorAll('.page').forEach((p,i) => p.classList.toggle('active', i===idx));
+  if (idx === 1) {
+    setTimeout(function() {
+      if (!dashboardInited) {
+        initDashboard();
+        dashboardInited = true;
+      } else {
+        document.querySelectorAll('#page1 .ch').forEach(function(el){
+          if (el._chart) setTimeout(function(){el._chart.resize();}, 50);
+        });
+      }
+    }, 150);
+  }
+  if (idx === 2) {
+    setTimeout(function() {
+      if (!reportInited) {
+        previewReport();
+        reportInited = true;
+      } else {
+        document.querySelectorAll('#page2 .ch').forEach(function(el){
+          if (el._chart) setTimeout(function(){el._chart.resize();}, 50);
+        });
+      }
+    }, 150);
+  }
+}
+
+// ============ PAGE 1: Record Details ============
+
+function applyFilter() {
+  const dateFrom = document.getElementById('filterDateFrom').value;
+  const dateTo = document.getElementById('filterDateTo').value;
+  const slotIdx = parseInt(document.getElementById('filterSlot').value);
+  let all = getAllRecords();
+  if (dateFrom) all = all.filter(r => r.date >= dateFrom);
+  if (dateTo) all = all.filter(r => r.date <= dateTo);
+  if (slotIdx >= 0) all = all.filter(r => r.slotIdx === slotIdx);
+  filteredRecords = all;
+  currentPageNum = 1;
+  renderRecords();
+}
+
+function resetFilter() {
+  document.getElementById('filterDateFrom').value = '';
+  document.getElementById('filterDateTo').value = '';
+  document.getElementById('filterSlot').value = '-1';
+  applyFilter();
+}
+
+function renderRecords() {
+  const tbody = document.getElementById('recordsBody');
+  const info = document.getElementById('recordsHeader');
+  const total = filteredRecords.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (currentPageNum > totalPages) currentPageNum = totalPages;
+  const start = (currentPageNum - 1) * PAGE_SIZE;
+  const end = Math.min(start + PAGE_SIZE, total);
+  const pageData = filteredRecords.slice(start, end);
+  info.textContent = '共 ' + total + ' 条记录（含注射数据），显示 ' + (start+1) + '-' + end + ' 条';
+  let html = '';
+  for (const r of pageData) {
+    const slotLabel = r.slotIdx === 7 ? '注射剂量' : SLOT_NAMES[r.slotIdx];
+    let tag = '';
+    let valDisplay = r.value.toFixed(1);
+    let actionBtns = '';
+    if (r.isInjection) {
+      tag = '<span class="tag-inj-bg">注射</span>';
+      valDisplay = r.value.toFixed(1) + ' mg';
+      actionBtns = '<button class="act-btn act-edit" onclick="openEditInjection(\'' + r.date + '\')">编辑</button><button class="act-btn act-del" onclick="deleteInjection(\'' + r.date + '\')">删除</button>';
+    } else {
+      const isHigh = (r.slotIdx === 0 && r.value > 6.1) || (r.slotIdx !== 0 && r.value > 7.8);
+      const isLow = r.value < 3.9;
+      if (isHigh) tag = '<span class="tag-high">⬆偏高</span>';
+      else if (isLow) tag = '<span class="tag-low">⬇偏低</span>';
+      actionBtns = '<button class="act-btn act-edit" onclick="openEdit(' + r.sourceIdx + ')">编辑</button><button class="act-btn act-del" onclick="deleteRecord(' + r.sourceIdx + ')">删除</button>';
+    }
+    html += '<tr><td>' + r.date + '</td><td>' + slotLabel + '</td><td>' + valDisplay + '</td><td>' + tag + '</td><td>' + actionBtns + '</td></tr>';
+  }
+  if (pageData.length === 0) {
+    html = '<tr><td colspan="5" style="text-align:center;padding:30px;color:#999">暂无匹配记录</td></tr>';
+  }
+  tbody.innerHTML = html;
+  renderPagination(totalPages);
+}
+
+function renderPagination(totalPages) {
+  const div = document.getElementById('pagination');
+  if (totalPages <= 1) { div.innerHTML = '<span class="info">共 1 页</span>'; return; }
+  let html = '<button onclick="goPage(' + (currentPageNum-1) + ')" ' + (currentPageNum<=1?'disabled':'') + '>‹</button>';
+  let start = Math.max(1, currentPageNum - 2);
+  let end = Math.min(totalPages, currentPageNum + 2);
+  if (end - start < 4) {
+    if (start === 1) end = Math.min(totalPages, start + 4);
+    else start = Math.max(1, end - 4);
+  }
+  if (start > 1) { html += '<button onclick="goPage(1)">1</button>'; if (start > 2) html += '<span style="color:#ccc;padding:0 4px">…</span>'; }
+  for (let i = start; i <= end; i++) {
+    html += '<button class="' + (i===currentPageNum?'active':'') + '" onclick="goPage(' + i + ')">' + i + '</button>';
+  }
+  if (end < totalPages) {
+    if (end < totalPages-1) html += '<span style="color:#ccc;padding:0 4px">…</span>';
+    html += '<button onclick="goPage(' + totalPages + ')">' + totalPages + '</button>';
+  }
+  html += '<button onclick="goPage(' + (currentPageNum+1) + ')" ' + (currentPageNum>=totalPages?'disabled':'') + '>›</button>';
+  html += '<span class="info">第 ' + currentPageNum + '/' + totalPages + ' 页</span>';
+  div.innerHTML = html;
+}
+
+function goPage(n) {
+  const totalPages = Math.max(1, Math.ceil(filteredRecords.length / PAGE_SIZE));
+  if (n < 1 || n > totalPages) return;
+  currentPageNum = n;
+  renderRecords();
+}
+
+function addRecord() {
+  const date = document.getElementById('addDate').value;
+  const slotIdx = parseInt(document.getElementById('addSlot').value);
+  const value = parseFloat(document.getElementById('addValue').value);
+  if (!date) { alert('请选择日期'); return; }
+  if (isNaN(value) || value <= 0) { alert('请输入有效数值'); return; }
+  if (slotIdx < 0 || slotIdx > 7) { alert('请选择时段'); return; }
+  if (slotIdx === 7) {
+    INJECTIONS[date] = value;
+  } else {
+    RECORDS.push([date, slotIdx, value]);
+  }
+  document.getElementById('addDate').value = '';
+  document.getElementById('addValue').value = '';
+  saveData();
+  applyFilter();
+}
+
+function openEdit(idx) {
+  const r = RECORDS[idx];
+  if (!r) return;
+  editIndex = idx;
+  document.getElementById('editDate').value = r[0];
+  document.getElementById('editSlot').value = r[1];
+  document.getElementById('editValue').value = r[2];
+  document.getElementById('editModal').classList.add('show');
+}
+
+function closeEditModal() {
+  document.getElementById('editModal').classList.remove('show');
+  editIndex = -1;
+  editMode = 'blood';
+  editInjKey = '';
+}
+
+function saveEdit() {
+  const date = document.getElementById('editDate').value;
+  const slotIdx = parseInt(document.getElementById('editSlot').value);
+  const value = parseFloat(document.getElementById('editValue').value);
+  if (!date || isNaN(value) || value <= 0) { alert('请完善信息'); return; }
+  if (editMode === 'injection') {
+    if (editInjKey !== date) {
+      delete INJECTIONS[editInjKey];
+    }
+    INJECTIONS[date] = value;
+  } else {
+    if (editIndex < 0) return;
+    RECORDS[editIndex] = [date, slotIdx, value];
+  }
+  saveData();
+  closeEditModal();
+  applyFilter();
+}
+
+function deleteRecord(idx) {
+  if (!confirm('确定要删除这条记录吗？')) return;
+  RECORDS.splice(idx, 1);
+  saveData();
+  applyFilter();
+}
+
+let editMode = 'blood'; // 'blood' or 'injection'
+let editInjKey = '';
+
+function openEditInjection(date) {
+  editMode = 'injection';
+  editInjKey = date;
+  document.getElementById('editDate').value = date;
+  document.getElementById('editSlot').value = 7;
+  document.getElementById('editValue').value = INJECTIONS[date];
+  document.getElementById('editModal').classList.add('show');
+}
+
+function deleteInjection(date) {
+  if (!confirm('确定要删除这条注射记录吗？')) return;
+  delete INJECTIONS[date];
+  saveData();
+  applyFilter();
+}
+
+function exportCSV() {
+  const BOM = '\uFEFF';
+  let csv = BOM + '日期,时段,数值(mmol/L),类型\n';
+  for (const r of filteredRecords) {
+    const slotLabel = r.slotIdx === 7 ? '注射剂量' : SLOT_NAMES[r.slotIdx];
+    const type = r.isInjection ? '注射' : '血糖';
+    csv += r.date + ',' + slotLabel + ',' + r.value + ',' + type + '\n';
+  }
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '血糖数据_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ============ PAGE 2: Dashboard ============
+
+function initDashboard() {
+  const row = document.getElementById('kpiRow');
+  if (row.hasAttribute('data-inited')) return;
+  row.setAttribute('data-inited', '1');
+  const kpis = [
+    {lab:"监测天数",val:UNIQUE_DATES,unit:"天",chg:"连续6个月"},
+    {lab:"有效数据点",val:TOTAL_POINTS,unit:"个",chg:"7时段交叉采集"},
+    {lab:"整体均值",val:OVERALL_MEAN.toFixed(1),unit:"mmol/L",chg:"中位数 "+OVERALL_MEDIAN.toFixed(1)},
+    {lab:"医学达标率",val:"95.0%",unit:"",chg:"按4.4-7.0/<10.0标准"},
+    {lab:"预警阈值",val:"严于标准",unit:"",chg:"提前20-50%发现风险"},
+    {lab:"注射记录",val:INJECTION_COUNT,unit:"条",chg:"1.2mg维持160天"}
+  ];
+  kpis.forEach(function(k){
+    var c=document.createElement("div");c.className="kpi-card";
+    c.innerHTML="<div class=lab>"+k.lab+"</div><div class=val>"+k.val+" <span style=font-size:12px;font-weight:500;color:var(--text-muted)>"+k.unit+"</span></div><div class=chg>"+k.chg+"</div>";
+    row.appendChild(c);
+  });
+  renderDashboardCharts();
+}
+
+function makeChart(id, opts) {
+  var el = document.getElementById(id);
+  if (!el) return null;
+  if (el._chart) try { el._chart.dispose(); } catch(e) {}
+  try {
+    var ch = echarts.init(el);
+    ch.setOption(opts);
+    el._chart = ch;
+    return ch;
+  } catch(e) { console.error('Chart error for ' + id, e); return null; }
+}
+
+function renderDashboardCharts() {
+  const ss = ["空腹","早餐后","午餐前","午餐后","晚餐前","晚餐后","凌晨3:00"];
+  
+  // Chart 1: Monthly Trend with 3:00
+  makeChart("c1", {
+    tooltip:{trigger:"axis"}, legend:{bottom:0,textStyle:{fontSize:10}},
+    grid:{left:50,right:20,bottom:40,top:10},
+    xAxis:{type:"category",data:MONTH_LABELS,axisLabel:{fontSize:10}},
+    yAxis:{type:"value",name:"mmol/L",min:4,max:10,axisLabel:{fontSize:10}},
+    series:[
+      {name:"空腹",type:"line",smooth:true,symbol:"circle",symbolSize:4,data:MONTHS.map(function(m){return TREND_DATA[0]?.[m]??null}),color:"#6366f1"},
+      {name:"早餐后2h",type:"line",smooth:true,symbol:"circle",symbolSize:4,data:MONTHS.map(function(m){return TREND_DATA[1]?.[m]??null}),color:"#f59e0b"},
+      {name:"午餐后2h",type:"line",smooth:true,symbol:"circle",symbolSize:4,data:MONTHS.map(function(m){return TREND_DATA[3]?.[m]??null}),color:"#ef4444"},
+      {name:"晚餐后2h",type:"line",smooth:true,symbol:"circle",symbolSize:4,data:MONTHS.map(function(m){return TREND_DATA[5]?.[m]??null}),color:"#10b981"},
+      {name:"凌晨3:00",type:"line",smooth:true,symbol:"diamond",symbolSize:4,data:MONTHS.map(function(m){return TREND_DATA[6]?.[m]??null}),color:"#8b5cf6",lineStyle:{type:"dashed"}}
+    ]
+  });
+  
+  makeChart("c2", {
+    tooltip:{trigger:"axis"}, legend:{bottom:0,textStyle:{fontSize:10}},
+    grid:{left:50,right:20,bottom:40,top:10},
+    xAxis:{type:"category",data:ss,axisLabel:{fontSize:10,rotate:20}},
+    yAxis:{type:"value",name:"正常率%",max:100,axisLabel:{fontSize:10}},
+    series:[
+      {name:"个人阈值",type:"bar",barWidth:12,data:SLOT_STATS.map(function(s){return s.personal.normal_pct}),color:"#6366f1",label:{show:true,position:"top",formatter:"{c}%",fontSize:8}},
+      {name:"医学标准",type:"bar",barWidth:12,data:SLOT_STATS.map(function(s){return s.medical.normal_pct}),color:"#34d399",label:{show:true,position:"top",formatter:"{c}%",fontSize:8}}
+    ]
+  });
+  
+  makeChart("c3", {
+    tooltip:{trigger:"axis",formatter:function(p){var si=p[0].dataIndex;return ss[si]+"<br/>正常: "+SLOT_STATS[si].personal.normal+"例 ("+SLOT_STATS[si].personal.normal_pct+"%)<br/>偏低: "+SLOT_STATS[si].personal.low+"例 ("+SLOT_STATS[si].personal.low_pct+"%)<br/>偏高: "+SLOT_STATS[si].personal.high+"例 ("+SLOT_STATS[si].personal.high_pct+"%)";}},
+    legend:{bottom:0,textStyle:{fontSize:10}},
+    grid:{left:50,right:20,bottom:40,top:10},
+    xAxis:{type:"category",data:ss,axisLabel:{fontSize:10,rotate:20}},
+    yAxis:{type:"value",name:"占比%",max:100,axisLabel:{fontSize:10}},
+    series:[
+      {name:"偏低",type:"bar",stack:"t",color:"#fbbf24",data:SLOT_STATS.map(function(s){return s.personal.low_pct})},
+      {name:"正常",type:"bar",stack:"t",color:"#34d399",data:SLOT_STATS.map(function(s){return s.personal.normal_pct})},
+      {name:"偏高",type:"bar",stack:"t",color:"#f87171",data:SLOT_STATS.map(function(s){return s.personal.high_pct})}
+    ]
+  });
+  
+  const doses = MONTHS.map(function(m){return DOSE_MAP[m]||null});
+  makeChart("c4", {
+    tooltip:{trigger:"axis"},legend:{bottom:0,textStyle:{fontSize:10}},
+    grid:{left:55,right:30,bottom:40,top:10},
+    xAxis:{type:"category",data:MONTH_LABELS,axisLabel:{fontSize:10}},
+    yAxis:[{type:"value",name:"空腹\nmmol/L",min:4,max:8,axisLabel:{fontSize:10}},{type:"value",name:"剂量\nmg",min:0,max:1.5,axisLabel:{fontSize:10}}],
+    series:[
+      {name:"空腹血糖均值",type:"line",smooth:true,symbol:"circle",symbolSize:5,data:MONTHS.map(function(m){return TREND_DATA[0]?.[m]??null}),color:"#6366f1"},
+      {name:"注射剂量(月均)",type:"bar",yAxisIndex:1,barWidth:16,data:doses,color:"#f59e0b",label:{show:true,position:"top",formatter:"{c}mg",fontSize:8}}
+    ]
+  });
+  
+  makeChart("c5", {
+    tooltip:{trigger:"axis"},
+    grid:{left:50,right:20,bottom:36,top:10},
+    xAxis:{type:"category",data:ss,axisLabel:{fontSize:10,rotate:20}},
+    yAxis:{type:"value",name:"mmol/L",min:4,max:10,axisLabel:{fontSize:10}},
+    series:[{type:"bar",barWidth:24,data:SLOT_AVGS.map(function(v,i){return{value:v,itemStyle:{color:v>6.5?"#f59e0b":"#6366f1"}};}),markLine:{silent:true,data:[{yAxis:6.1,lineStyle:{color:"#f59e0b",type:"dashed"},label:{formatter:"个人上界\n6.1(空腹)",fontSize:8}}]},label:{show:true,position:"top",formatter:function(p){return p.data.value.toFixed(1);},fontSize:9}}]
+  });
+  
+  // Extreme table
+  var extDiv = document.getElementById("extremeBox");
+  var all = [];
+  EXTREME_LOW.forEach(function(p){all.push({type:"⬇️最低",date:p[0],slot:SLOT_NAMES[p[1]],val:p[2]});});
+  EXTREME_HIGH.forEach(function(p){all.push({type:"⬆️最高",date:p[0],slot:SLOT_NAMES[p[1]],val:p[2]});});
+  var h="<table class=tbl><tr><th>类型</th><th>日期</th><th>时段</th><th>数值</th></tr>";
+  all.slice(0,6).forEach(function(p){
+    h+="<tr><td>"+p.type+"</td><td>"+p.date+"</td><td>"+p.slot+"</td><td><b>"+p.val.toFixed(1)+"</b></td></tr>";
+  });
+  h+="</table>";
+  extDiv.innerHTML=h;
+  
+  makeChart("c6", {
+    tooltip:{formatter:function(p){var si=p[0].dataIndex;return ss[si]+"<br/>总数: "+SLOT_STATS[si].total+"<br/>正常: "+SLOT_STATS[si].personal.normal+"<br/>偏低: "+SLOT_STATS[si].personal.low+"<br/>偏高: "+SLOT_STATS[si].personal.high;}},
+    grid:{left:50,right:20,bottom:36,top:10},
+    xAxis:{type:"category",data:ss,axisLabel:{fontSize:10,rotate:20}},
+    yAxis:{type:"value",name:"记录数",axisLabel:{fontSize:10}},
+    series:[
+      {name:"正常",type:"bar",stack:"t",color:"#34d399",data:SLOT_STATS.map(function(s){return s.personal.normal})},
+      {name:"偏低",type:"bar",stack:"t",color:"#fbbf24",data:SLOT_STATS.map(function(s){return s.personal.low})},
+      {name:"偏高",type:"bar",stack:"t",color:"#f87171",data:SLOT_STATS.map(function(s){return s.personal.high})}
+    ]
+  });
+  
+  window.addEventListener("resize", function(){
+    document.querySelectorAll('.ch').forEach(function(el){
+      if (el._chart) try { el._chart.resize(); } catch(e) {}
+    });
+  });
+}
+
+// ============ PAGE 3: Report ============
+
+function getFilteredRecordsForReport(dateFrom, dateTo) {
+  return RECORDS.filter(function(r){ return r[0] >= dateFrom && r[0] <= dateTo; });
+}
+
+function previewReport() {
+  var from = document.getElementById('rptFrom').value || DATE_MIN;
+  var to = document.getElementById('rptTo').value || DATE_MAX;
+  var filtered = getFilteredRecordsForReport(from, to);
+  var vals = filtered.map(function(r){return r[2];});
+  var avg = vals.length ? (vals.reduce(function(a,b){return a+b})/vals.length).toFixed(1) : '-';
+  var n = vals.length;
+  var statDiv = document.getElementById('rptStat');
+  statDiv.innerHTML = 
+    '<div class=kpi-card><div class=lab>统计周期</div><div class=val style=font-size:16px>'+from+' - '+to+'</div></div>' +
+    '<div class=kpi-card><div class=lab>数据点数</div><div class=val>'+n+' <span style=font-size:12px;font-weight:500;color:var(--text-muted)>个</span></div></div>' +
+    '<div class=kpi-card><div class=lab>均值</div><div class=val>'+avg+' <span style=font-size:12px;font-weight:500;color:var(--text-muted)>mmol/L</span></div></div>' +
+    '<div class=kpi-card><div class=lab>监测天数</div><div class=val style=font-size:16px>'+UNIQUE_DATES+' <span style=font-size:12px;font-weight:500;color:var(--text-muted)>天</span></div></div>';
+  renderReportCharts(from, to, filtered);
+}
+
+function getDaysBetween(a, b) {
+  var da = new Date(a+'T00:00:00'), db = new Date(b+'T00:00:00');
+  return Math.round((db - da) / 86400000) + 1;
+}
+
+function renderReportCharts(from, to, filtered) {
+  var div = document.getElementById('rptCharts');
+  var sn = ["空腹","早餐后","午餐前","午餐后","晚餐前","晚餐后","凌晨3:00"];
+  var days = getDaysBetween(from, to);
+  var isShortRange = days < 30;
+  
+  var periodMonths = [];
+  MONTHS.forEach(function(m){if(m >= from.slice(0,7) && m <= to.slice(0,7)) periodMonths.push(m);});
+  if (periodMonths.length === 0) periodMonths = MONTHS;
+  var periodLabels = periodMonths.map(function(m){return m.replace('-','/');});
+  
+  // Build daily data for short range
+  var dailyDates = [];
+  var dailySlots = {}; // date -> {slotIdx: [values]}
+  if (isShortRange) {
+    var d = new Date(from + 'T00:00:00');
+    var endD = new Date(to + 'T00:00:00');
+    while (d <= endD) {
+      var y = d.getFullYear();
+      var mo = ('0'+(d.getMonth()+1)).slice(-2);
+      var dd = ('0'+d.getDate()).slice(-2);
+      var ds = y+'-'+mo+'-'+dd;
+      dailyDates.push(ds);
+      dailySlots[ds] = {};
+      d.setDate(d.getDate() + 1);
+    }
+    filtered.forEach(function(r){
+      if (dailySlots[r[0]]) {
+        if (!dailySlots[r[0]][r[1]]) dailySlots[r[0]][r[1]] = [];
+        dailySlots[r[0]][r[1]].push(r[2]);
+      }
+    });
+  }
+  
+  var t1 = isShortRange ? ('📈 血糖趋势（按日 · ' + days + '天）') : '📈 月度血糖均值趋势';
+  var t2 = isShortRange ? ('⚖️ 双轨预警对比（' + days + '天）') : '⚖️ 双轨预警对比';
+  var t3 = isShortRange ? ('🚦 各时段预警占比（' + days + '天）') : '🚦 各时段预警占比（个人阈值）';
+  var t4 = isShortRange ? ('💉 注射剂量 vs 空腹血糖（按日 · ' + days + '天）') : '💉 注射剂量 vs 空腹血糖';
+  var t5 = isShortRange ? ('📊 各时段血糖分布（' + days + '天）') : '📊 各时段血糖分布';
+  var t6 = isShortRange ? ('⚠️ 极值记录与异常溯源（' + days + '天）') : '⚠️ 极值记录与异常溯源';
+  var html = 
+    '<div class="card"><h3>' + t1 + '</h3><div class="ch" id="r1"></div></div>' +
+    '<div class="card"><h3>' + t2 + '</h3><div class="ch" id="r2"></div></div>' +
+    '<div class="card"><h3>' + t4 + '</h3><div class="ch" id="r4"></div></div>' +
+    '<div class="card"><h3>' + t5 + '</h3><div class="ch" id="r5"></div></div>' +
+    '<div class="card"><h3>' + t3 + '</h3><div class="ch" id="r3"></div></div>' +
+    '<div class="card"><h3>' + t6 + '</h3><div class="ch" id="r6"></div></div>';
+  div.innerHTML = html;
+  
+  // Chart r1: Trend (daily or monthly based on range)
+  if (isShortRange) {
+    var dLabels = dailyDates.map(function(ds){return ds.slice(5);});
+    var dSeries = [];
+    [0,1,2,3,4,5,6].forEach(function(si){
+      var vals = dLabels.map(function(_,i){
+        var arr = dailySlots[dailyDates[i]]?.[si];
+        return arr ? Math.round(arr.reduce(function(a,b){return a+b},0)/arr.length*100)/100 : null;
+      });
+      var names = ["空腹","早餐后2h","午餐前","午餐后2h","晚餐前","晚餐后2h","凌晨3:00"];
+      dSeries.push({name:names[si], type:"line", smooth:true, symbol:"circle", symbolSize:3,
+        data:vals, color:["#6366f1","#f59e0b","#14b8a6","#ef4444","#f97316","#10b981","#8b5cf6"][si],
+        lineStyle: si===6?{type:"dashed"}:undefined});
+    });
+    makeChart("r1", {
+      tooltip:{trigger:"axis"}, legend:{bottom:0,textStyle:{fontSize:9}},
+      grid:{left:50,right:20,bottom:36,top:10},
+      xAxis:{type:"category",data:dLabels,axisLabel:{fontSize:9,rotate:30}},
+      yAxis:{type:"value",name:"mmol/L",min:3,max:12,axisLabel:{fontSize:9}},
+      series:dSeries
+    });
+  } else {
+    makeChart("r1", {
+      tooltip:{trigger:"axis"}, legend:{bottom:0,textStyle:{fontSize:10}},
+      grid:{left:50,right:20,bottom:36,top:10},
+      xAxis:{type:"category",data:periodLabels,axisLabel:{fontSize:10}},
+      yAxis:{type:"value",name:"mmol/L",min:4,max:10,axisLabel:{fontSize:10}},
+      series:[
+        {name:"空腹",type:"line",smooth:true,symbol:"circle",symbolSize:4,data:periodMonths.map(function(m){return TREND_DATA[0]?.[m]??null}),color:"#6366f1"},
+        {name:"早餐后2h",type:"line",smooth:true,symbol:"circle",symbolSize:4,data:periodMonths.map(function(m){return TREND_DATA[1]?.[m]??null}),color:"#f59e0b"},
+        {name:"午餐后2h",type:"line",smooth:true,symbol:"circle",symbolSize:4,data:periodMonths.map(function(m){return TREND_DATA[3]?.[m]??null}),color:"#ef4444"},
+        {name:"晚餐后2h",type:"line",smooth:true,symbol:"circle",symbolSize:4,data:periodMonths.map(function(m){return TREND_DATA[5]?.[m]??null}),color:"#10b981"},
+        {name:"凌晨3:00",type:"line",smooth:true,symbol:"diamond",symbolSize:4,data:periodMonths.map(function(m){return TREND_DATA[6]?.[m]??null}),color:"#8b5cf6",lineStyle:{type:"dashed"}}
+      ]
+    });
+  }
+  
+  makeChart("r2", {
+    tooltip:{trigger:"axis"}, legend:{bottom:0,textStyle:{fontSize:10}},
+    grid:{left:50,right:20,bottom:40,top:10},
+    xAxis:{type:"category",data:sn,axisLabel:{fontSize:10,rotate:20}},
+    yAxis:{type:"value",name:"正常率%",max:100,axisLabel:{fontSize:10}},
+    series:(function(){
+      var pData = [], mData = [];
+      [0,1,2,3,4,5,6].forEach(function(si){
+        var svals = filtered.filter(function(r){return r[1]===si}).map(function(r){return r[2];});
+        var n = svals.length;
+        if (n === 0) { pData.push(0); mData.push(0); return; }
+        var perLow = svals.filter(function(v){return v < 3.9}).length;
+        var perHigh = svals.filter(function(v){return v > (si===0?6.1:7.8)}).length;
+        pData.push(Math.round((n-perLow-perHigh)/n*1000)/10);
+        var medLow = svals.filter(function(v){return v < 4.4}).length;
+        var medHigh = svals.filter(function(v){return v > (si===0||si===2||si===4||si===6?7.0:10.0)}).length;
+        mData.push(Math.round((n-medLow-medHigh)/n*1000)/10);
+      });
+      return [
+        {name:"个人阈值",type:"bar",barWidth:12,data:pData,color:"#6366f1",label:{show:true,position:"top",formatter:"{c}%",fontSize:8}},
+        {name:"医学标准",type:"bar",barWidth:12,data:mData,color:"#34d399",label:{show:true,position:"top",formatter:"{c}%",fontSize:8}}
+      ];
+    })()
+  });
+  
+  if (isShortRange) {
+    var dLabels = dailyDates.map(function(ds){return ds.slice(5);});
+    var fastData = dLabels.map(function(_,i){
+      var arr = dailySlots[dailyDates[i]]?.[0];
+      return arr ? Math.round(arr.reduce(function(a,b){return a+b},0)/arr.length*100)/100 : null;
+    });
+    var injData = dLabels.map(function(_,i){return INJECTIONS[dailyDates[i]] || null;});
+    var maxDose = 1.5;
+    makeChart("r4", {
+      tooltip:{trigger:"axis"},legend:{bottom:0,textStyle:{fontSize:9}},
+      grid:{left:55,right:30,bottom:36,top:10},
+      xAxis:{type:"category",data:dLabels,axisLabel:{fontSize:9,rotate:30}},
+      yAxis:[{type:"value",name:"空腹\nmmol/L",min:3,max:10,axisLabel:{fontSize:9}},{type:"value",name:"剂量\nmg",min:0,max:maxDose,axisLabel:{fontSize:9}}],
+      series:[
+        {name:"空腹血糖",type:"line",smooth:true,symbol:"circle",symbolSize:4,data:fastData,color:"#6366f1"},
+        {name:"注射剂量",type:"bar",yAxisIndex:1,barWidth:14,data:injData,color:"#f59e0b",label:{show:true,position:"top",formatter:"{c}mg",fontSize:7}}
+      ]
+    });
+  } else {
+    var doseData = periodMonths.map(function(m){return DOSE_MAP[m]||null});
+    makeChart("r4", {
+      tooltip:{trigger:"axis"},legend:{bottom:0,textStyle:{fontSize:10}},
+      grid:{left:55,right:30,bottom:36,top:10},
+      xAxis:{type:"category",data:periodLabels,axisLabel:{fontSize:10}},
+      yAxis:[{type:"value",name:"空腹\nmmol/L",min:4,max:8,axisLabel:{fontSize:10}},{type:"value",name:"剂量\nmg",min:0,max:1.5,axisLabel:{fontSize:10}}],
+      series:[
+        {name:"空腹血糖均值",type:"line",smooth:true,symbol:"circle",symbolSize:5,data:periodMonths.map(function(m){return TREND_DATA[0]?.[m]??null}),color:"#6366f1"},
+        {name:"注射剂量(月均)",type:"bar",yAxisIndex:1,barWidth:16,data:doseData,color:"#f59e0b",label:{show:true,position:"top",formatter:"{c}mg",fontSize:8}}
+      ]
+    });
+  }
+  
+  var avgData = [];
+  for (var si=0; si<7; si++) {
+    var svals = filtered.filter(function(r){return r[1]===si}).map(function(r){return r[2];});
+    avgData.push(svals.length ? Math.round(svals.reduce(function(a,b){return a+b})/svals.length*100)/100 : 0);
+  }
+  makeChart("r5", {
+    tooltip:{trigger:"axis"},
+    grid:{left:50,right:20,bottom:36,top:10},
+    xAxis:{type:"category",data:sn,axisLabel:{fontSize:10,rotate:20}},
+    yAxis:{type:"value",name:"mmol/L",min:3,max:11,axisLabel:{fontSize:10}},
+    series:[{type:"bar",barWidth:24,data:avgData.map(function(v,i){return{value:v,itemStyle:{color:v>6.5?"#f59e0b":"#6366f1"}};}),markLine:{silent:true,data:[{yAxis:6.1,lineStyle:{color:"#f59e0b",type:"dashed"},label:{formatter:"个人上界\n6.1(空腹)",fontSize:8}}]},label:{show:true,position:"top",formatter:function(p){return p.data.value.toFixed(1);},fontSize:9}}]
+  });
+  
+  makeChart("r3", {
+    tooltip:{trigger:"axis",formatter:function(p){var si=p[0].dataIndex;var svals=filtered.filter(function(r){return r[1]===si}).map(function(r){return r[2];});var n=svals.length;var l=svals.filter(function(v){return v<3.9}).length;var h=svals.filter(function(v){return v>(si===0?6.1:7.8)}).length;return sn[si]+"<br/>正常: "+(n-l-h)+"例<br/>偏低: "+l+"例<br/>偏高: "+h+"例";}},
+    legend:{bottom:0,textStyle:{fontSize:10}},
+    grid:{left:50,right:20,bottom:40,top:10},
+    xAxis:{type:"category",data:sn,axisLabel:{fontSize:10,rotate:20}},
+    yAxis:{type:"value",name:"占比%",max:100,axisLabel:{fontSize:10}},
+    series:(function(){
+      var lowData = [], normData = [], highData = [];
+      for (var si=0; si<7; si++) {
+        var svals = filtered.filter(function(r){return r[1]===si}).map(function(r){return r[2];});
+        var n = svals.length;
+        if (n===0) { lowData.push(0); normData.push(0); highData.push(0); continue; }
+        var l = svals.filter(function(v){return v<3.9}).length;
+        var h = svals.filter(function(v){return v>(si===0?6.1:7.8)}).length;
+        lowData.push(Math.round(l/n*1000)/10);
+        normData.push(Math.round((n-l-h)/n*1000)/10);
+        highData.push(Math.round(h/n*1000)/10);
+      }
+      return [
+        {name:"偏低",type:"bar",stack:"t",color:"#fbbf24",data:lowData},
+        {name:"正常",type:"bar",stack:"t",color:"#34d399",data:normData},
+        {name:"偏高",type:"bar",stack:"t",color:"#f87171",data:highData}
+      ];
+    })()
+  });
+  
+  var extVals = [];
+  for (var si=0; si<7; si++) {
+    var svals = filtered.filter(function(r){return r[1]===si}).map(function(r){return r[2];});
+    if (svals.length) {
+      var l = svals.filter(function(v){return v<3.9}).length;
+      var h = svals.filter(function(v){return v>(si===0?6.1:7.8)}).length;
+      extVals.push({normal: svals.length-l-h, low:l, high:h});
+    } else extVals.push({normal:0,low:0,high:0});
+  }
+  makeChart("r6", {
+    tooltip:{formatter:function(p){var si=p[0].dataIndex;return sn[si]+"<br/>总数: "+(extVals[si].normal+extVals[si].low+extVals[si].high)+"<br/>正常: "+extVals[si].normal+"<br/>偏低: "+extVals[si].low+"<br/>偏高: "+extVals[si].high;}},
+    grid:{left:50,right:20,bottom:36,top:10},
+    xAxis:{type:"category",data:sn,axisLabel:{fontSize:10,rotate:20}},
+    yAxis:{type:"value",name:"记录数",axisLabel:{fontSize:10}},
+    series:[
+      {name:"正常",type:"bar",stack:"t",color:"#34d399",data:extVals.map(function(s){return s.normal})},
+      {name:"偏低",type:"bar",stack:"t",color:"#fbbf24",data:extVals.map(function(s){return s.low})},
+      {name:"偏高",type:"bar",stack:"t",color:"#f87171",data:extVals.map(function(s){return s.high})}
+    ]
+  });
+}
+
+function genPDF() {
+  var from = document.getElementById('rptFrom').value || DATE_MIN;
+  var to = document.getElementById('rptTo').value || DATE_MAX;
+  var chartIds = ['r1','r2','r3','r4','r5','r6'];
+  var chartImages = [];
+  chartIds.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el && el._chart) {
+      chartImages.push({id:id, url:el._chart.getDataURL({type:'png',pixelRatio:2,backgroundColor:'#fff'})});
+    }
+  });
+  var filtered = getFilteredRecordsForReport(from, to);
+  var vals = filtered.map(function(r){return r[2];});
+  var avg = vals.length ? (vals.reduce(function(a,b){return a+b})/vals.length).toFixed(1) : '-';
+  var w = window.open('', '_blank', 'width=1000,height=800');
+  var doc = w.document;
+  doc.write('<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>血糖数据报告</title>');
+  doc.write('<style>');
+  doc.write('*{margin:0;padding:0;box-sizing:border-box}');
+  doc.write('body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,PingFang SC,Microsoft YaHei,sans-serif;padding:30px;color:#1e1e2e}');
+  doc.write('.rpt-header{text-align:center;margin-bottom:20px;border-bottom:2px solid #6366f1;padding-bottom:12px}');
+  doc.write('.rpt-header h1{font-size:20px}');
+  doc.write('.rpt-header .sub{font-size:12px;color:#888;margin-top:4px}');
+  doc.write('.rpt-stat{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}');
+  doc.write('.rpt-stat .item{background:#f8f9fc;padding:10px;border-radius:6px;text-align:center}');
+  doc.write('.rpt-stat .item .l{font-size:11px;color:#888}');
+  doc.write('.rpt-stat .item .v{font-size:18px;font-weight:700;margin-top:2px}');
+  doc.write('.chart-wrap{margin-bottom:16px;page-break-inside:avoid}');
+  doc.write('.chart-wrap h3{font-size:13px;margin-bottom:6px}');
+  doc.write('.chart-wrap img{width:100%;border-radius:4px;border:1px solid #eee}');
+  doc.write('@media print{body{padding:20px}.chart-wrap{page-break-inside:avoid}}');
+  doc.write('</style></head><body>');
+  doc.write('<div class="rpt-header">');
+  doc.write('<h1>📊 血糖数据监测报告</h1>');
+  doc.write('<div class="sub">报告周期：' + from + ' 至 ' + to + ' · 共 ' + vals.length + ' 条数据 · 生成时间：' + new Date().toLocaleString("zh-CN") + '</div>');
+  doc.write('</div>');
+  doc.write('<div class="rpt-stat">');
+  doc.write('<div class="item"><div class="l">数据点数</div><div class="v">' + vals.length + ' 个</div></div>');
+  doc.write('<div class="item"><div class="l">均值</div><div class="v">' + avg + ' mmol/L</div></div>');
+  doc.write('<div class="item"><div class="l">监测天数</div><div class="v">' + UNIQUE_DATES + ' 天</div></div>');
+  doc.write('<div class="item"><div class="l">记录周期</div><div class="v">' + from + ' - ' + to + '</div></div>');
+  doc.write('</div>');
+  var chartTitles = ['月度血糖均值趋势', '双轨预警对比', '各时段预警占比', '注射剂量 vs 空腹血糖', '各时段血糖分布', '极值记录与异常溯源'];
+  chartImages.forEach(function(ci, i) {
+    doc.write('<div class="chart-wrap"><h3>' + chartTitles[i] + '</h3><img src="' + ci.url + '" alt="' + chartTitles[i] + '"></div>');
+  });
+  doc.write('<div style="text-align:center;font-size:10px;color:#aaa;margin-top:20px;border-top:1px solid #eee;padding-top:8px">');
+  doc.write('血糖数据监测系统 · 个人预警阈值版 · ' + new Date().getFullYear());
+  doc.write('</div></body></html>');
+  doc.close();
+  setTimeout(function() { w.print(); }, 2000);
+}
+
+// ============ INIT ============
+var today = new Date();
+document.getElementById('filterDateFrom').value = DATE_MIN;
+document.getElementById('filterDateTo').value = new Date(today.getTime() - today.getTimezoneOffset()*60000).toISOString().slice(0,10);
+document.getElementById('addDate').value = new Date(today.getTime() - today.getTimezoneOffset()*60000).toISOString().slice(0,10);
+document.getElementById('rptFrom').value = DATE_MIN;
+document.getElementById('rptTo').value = new Date(today.getTime() - today.getTimezoneOffset()*60000).toISOString().slice(0,10);
+applyFilter();
+
+</script>
+</body>
+</html>
