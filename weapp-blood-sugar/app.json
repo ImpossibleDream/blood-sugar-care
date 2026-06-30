@@ -1,0 +1,25 @@
+{
+  "pages": [
+    "pages/login/login",
+    "pages/records/records",
+    "pages/dashboard/dashboard",
+    "pages/report/report",
+    "pages/profile/profile"
+  ],
+  "window": {
+    "navigationStyle": "custom",
+    "backgroundColor": "#f5f2ec",
+    "backgroundTextStyle": "dark"
+  },
+  "usingComponents": {
+    "tabs-bar": "/components/tabs-bar/tabs-bar",
+    "kpi-card": "/components/kpi-card/kpi-card",
+    "chart-card": "/components/chart-card/chart-card",
+    "filter-bar": "/components/filter-bar/filter-bar",
+    "record-table": "/components/record-table/record-table"
+  },
+  "sitemapLocation": "sitemap.json",
+  "permission": {
+    "scope.userLocation": { "desc": "用于获取位置信息" }
+  }
+}

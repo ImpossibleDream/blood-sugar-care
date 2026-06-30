@@ -1,0 +1,19 @@
+<!-- 底部导航栏组件 · 作品集演示版 -->
+<view class="tabs-bar">
+  <view class="tab-item {{activeIdx === 0 ? 'active' : ''}}" data-idx="0" bindtap="onTabTap">
+    <text class="tab-icon">📋</text>
+    <text class="tab-label">记录明细</text>
+  </view>
+  <view class="tab-item {{activeIdx === 1 ? 'active' : ''}}" data-idx="1" bindtap="onTabTap">
+    <text class="tab-icon">📊</text>
+    <text class="tab-label">数据看板</text>
+  </view>
+  <view class="tab-item {{activeIdx === 2 ? 'active' : ''}}" data-idx="2" bindtap="onTabTap">
+    <text class="tab-icon">📄</text>
+    <text class="tab-label">报告</text>
+  </view>
+  <view class="tab-item {{activeIdx === 3 ? 'active' : ''}}" data-idx="3" bindtap="onTabTap">
+    <text class="tab-icon">👤</text>
+    <text class="tab-label">我的</text>
+  </view>
+</view>

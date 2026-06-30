@@ -1,0 +1,11 @@
+{
+  "name": "blood-sugar-login",
+  "version": "1.0.0",
+  "description": "血糖监测系统 - 云登录函数（作品集演示版）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  },
+  "author": "作品集演示",
+  "license": "MIT"
+}

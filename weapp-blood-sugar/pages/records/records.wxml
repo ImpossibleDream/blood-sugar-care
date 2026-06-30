@@ -1,0 +1,74 @@
+<view class="app-page">
+  <view class="app-header" style="padding-top: {{statusBarHeight}}px">
+    <view class="title">📋 血糖数据 · 记录明细</view>
+  </view>
+  <view class="app-content">
+  <filter-bar
+    dateFrom="{{filterDateFrom}}"
+    dateTo="{{filterDateTo}}"
+    slotIdx="{{filterSlot}}"
+    bind:filterchange="onFilterChange"
+  />
+  <view class="add-form card">
+    <view class="add-row">
+      <view class="add-field">
+        <text class="add-label">日期</text>
+        <picker mode="date" value="{{addDate}}" bindchange="onAddDateChange">
+          <text class="add-value">{{addDate || '选择日期'}}</text>
+        </picker>
+      </view>
+      <view class="add-field">
+        <text class="add-label">时段</text>
+        <picker mode="selector" range="{{slotOptions}}" value="{{addSlot}}" bindchange="onAddSlotChange">
+          <text class="add-value">{{slotOptions[addSlot]}}</text>
+        </picker>
+      </view>
+      <view class="add-field">
+        <text class="add-label">数值</text>
+        <input class="add-input" type="digit" placeholder="如 5.2" value="{{addValue}}" bindinput="onAddValueInput" />
+      </view>
+      <button class="btn btn-primary btn-sm add-btn" bindtap="addRecord">添加</button>
+    </view>
+  </view>
+  <view class="export-bar">
+        <button class="btn btn-outline btn-sm" bindtap="exportCSV">导出CSV</button>
+    <text class="record-count">共 {{totalRecords}} 条</text>
+  </view>
+  <record-table
+    records="{{displayRecords}}"
+    page="{{currentPage}}"
+    pageSize="30"
+    bind:edit="onEditRecord"
+    bind:delete="onDeleteRecord"
+  />
+  <view class="modal-overlay {{showEditModal ? 'show' : ''}}" catchtouchmove="noop">
+    <view class="modal-box">
+      <view class="modal-title">✏️ 编辑记录</view>
+      <view class="form-group">
+        <text class="form-label modal-label">日期</text>
+        <picker mode="date" value="{{editDate}}" bindchange="onEditDateChange">
+          <text class="picker-value">{{editDate}}</text>
+        </picker>
+      </view>
+      <view class="form-group">
+        <text class="form-label modal-label">时段</text>
+        <picker mode="selector" range="{{slotOptions}}" value="{{editSlot}}" bindchange="onEditSlotChange">
+          <text class="picker-value">{{slotOptions[editSlot]}}</text>
+        </picker>
+      </view>
+      <view class="form-group">
+        <text class="form-label modal-label">数值 (mmol/L)</text>
+        <input class="picker-value" type="digit" value="{{editValue}}" bindinput="onEditValueInput" placeholder="如 5.2" />
+      </view>
+      <view class="modal-actions">
+        <button class="btn btn-sm btn-cancel" bindtap="closeEditModal" style="flex:1">取消</button>
+        <button class="btn btn-primary btn-sm" bindtap="saveEdit" style="flex:1">保存</button>
+      </view>
+    </view>
+  </view>
+  <view class="footer-legal">
+    本系统为个人作品集演示，不涉及真实患者诊疗数据。数据仅存储于本地缓存或用户授权云数据库。
+  </view>
+  </view>
+  <tabs-bar activeIdx="{{tabIdx}}" bind:tabchange="onTabChange" />
+</view>

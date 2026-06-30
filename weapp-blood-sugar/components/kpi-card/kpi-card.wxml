@@ -1,0 +1,5 @@
+<view class="kpi-card" style="flex:{{flex}}; width:{{minWidth}}; min-width:{{minWidth}};">
+  <view class="lab">{{label}}</view>
+  <view class="val" style="color: {{color || '#1d1b1b'}}">{{value}}</view>
+  <view class="chg" wx:if="{{change !== undefined && change !== ''}}">{{change}}</view>
+</view>

@@ -1,0 +1,60 @@
+<view class="app-page">
+  <view class="app-header" style="padding-top: {{statusBarHeight}}px">
+    <view class="title">📄 血糖数据报告 · PDF生成</view>
+    <view class="sub">选择日期范围，预览后生成可下载PDF报告</view>
+  </view>
+  <view class="app-content">
+    <view class="report-actions card">
+      <view class="report-fields-row">
+        <view class="report-field">
+          <text class="report-label">日期从</text>
+          <picker mode="date" value="{{rptFrom}}" bindchange="onRptFromChange">
+            <text class="report-value">{{rptFrom || '选择'}}</text>
+          </picker>
+        </view>
+        <view class="report-field">
+          <text class="report-label">至</text>
+          <picker mode="date" value="{{rptTo}}" bindchange="onRptToChange">
+            <text class="report-value">{{rptTo || '选择'}}</text>
+          </picker>
+        </view>
+      </view>
+      <view class="report-btns-row">
+        <button class="btn btn-primary btn-sm" bindtap="refreshPreview">🔄 刷新预览</button>
+        <button class="btn btn-primary btn-sm" bindtap="generateReport" style="background:#059669">💾 保存报告</button>
+      </view>
+    </view>
+
+    <view class="card" wx:if="{{loaded}}">
+    <view class="report-stat">
+      <view class="kpi-card" wx:for="{{stats}}" wx:key="index">
+        <view class="lab">{{item.label}}</view>
+        <view class="val" style="color:{{item.color}}">{{item.value}}</view>
+      </view>
+    </view>
+    </view>
+
+    <view class="db-grid" wx:if="{{loaded}}">
+      <view class="card fw"><view class="h3">📈 月度血糖均值趋势</view><canvas type="2d" id="rp1" class="ch"></canvas><view class="nt">包含凌晨3:00记录，空腹血糖从12月6.37降至5月4.78（↓25%）。</view></view>
+      <view class="card"><view class="h3">⚖️ 双轨预警对比</view><canvas type="2d" id="rp2" class="ch"></canvas><view class="nt">个人阈值比医学标准（4.4-7.0/&lt;10.0）严格约20-50%。</view></view>
+      <view class="card"><view class="h3">🚦 各时段预警占比（个人阈值）</view><canvas type="2d" id="rp3" class="ch"></canvas><view class="chart-legend"><view class="legend-item" wx:for="{{donutData}}" wx:key="index" catchtap="onDonutTap" data-index="{{index}}"><view class="legend-color" style="background:{{item.color}}"></view><text>{{item.label}}</text></view></view><view class="nt">凌晨3:00正常率最高，晚餐前偏高率38.2%。</view></view>
+      <view class="card"><view class="h3">💉 注射剂量 vs 空腹血糖</view><canvas type="2d" id="rp4" class="ch"></canvas><view class="nt">1.2mg稳定160天，空腹持续低于5.3。</view></view>
+      <view class="card"><view class="h3">📊 各时段血糖分布</view><canvas type="2d" id="rp5" class="ch"></canvas><view class="nt">凌晨3:00最稳定，早餐后波动最大。</view></view>
+      <view class="card"><view class="h3">⚠️ 极值记录与异常溯源</view><canvas type="2d" id="rp6" class="ch"></canvas><view class="nt">偏低极值出现在4月下旬，偏高极值集中在初期。</view></view>
+    </view>
+
+    <view class="card" wx:if="{{loaded}}">
+      <view class="h3">📋 近7条原始记录</view>
+      <view wx:for="{{recentRecords}}" wx:key="id" class="recent-row">
+        <text class="recent-date">{{item.date}}</text>
+        <text class="recent-slot">{{item.slotName}}</text>
+        <text class="recent-val">{{item.valDisplay}}</text>
+        <text wx:if="{{item.tag !== ''}}" class="tag-{{item.tag}}">{{item.tagText}}</text>
+      </view>
+      <view wx:if="{{recentRecords.length === 0}}" class="empty-state">暂无数据</view>
+    </view>
+
+    <view class="footer-legal">本报告为个人作品集演示用途，不构成医学建议。数据仅供参考。</view>
+  </view>
+  <tabs-bar activeIdx="{{tabIdx}}" bind:tabchange="onTabChange" />
+</view>

@@ -1,0 +1,46 @@
+<view class="app-page profile-page">
+  <view class="app-header" style="padding-top: {{statusBarHeight}}px">
+    <view class="title">我的</view>
+  </view>
+  <view class="app-content">
+  <view class="profile-card">
+    <view class="profile-avatar">
+      <image wx:if="{{avatar}}" class="avatar-img" src="{{avatar}}" mode="aspectFill"></image>
+      <view wx:else class="avatar-placeholder">👤</view>
+    </view>
+    <view class="profile-name">{{nickName || '未登录'}}</view>
+    <view class="profile-mode">登录方式：{{loginModeLabel}}</view>
+  </view>
+
+  <view class="info-list card">
+    <view class="info-row">
+      <text class="info-key">应用名称</text>
+      <text class="info-val">血糖数据监测系统</text>
+    </view>
+    <view class="info-row">
+      <text class="info-key">版本</text>
+      <text class="info-val">v1.0.0（作品集演示版）</text>
+    </view>
+    <view class="info-row">
+      <text class="info-key">数据模式</text>
+      <text class="info-val">{{cloudMode ? '云端同步' : '本地存储'}}</text>
+    </view>
+    <view class="info-row">
+      <text class="info-key">总数据点</text>
+      <text class="info-val">{{recordCount}}</text>
+    </view>
+    <view class="info-row">
+      <text class="info-key">设计来源</text>
+      <text class="info-val">blood_sugar_dashboard.html</text>
+    </view>
+  </view>
+
+  <button class="btn btn-outline logout-btn" bindtap="onLogout">退出登录</button>
+
+  <view class="footer-legal">
+    本应用为个人作品集演示用途，不涉及真实患者诊疗数据。<text></text>
+    数据运营作品集 · 2026 · 个人预警阈值版
+  </view>
+  </view>
+  <tabs-bar activeIdx="3" bind:tabchange="onTabChange" />
+</view>

@@ -1,0 +1,7 @@
+{
+  "usingComponents": {
+    "filter-bar": "/components/filter-bar/filter-bar",
+    "record-table": "/components/record-table/record-table"
+  },
+  "navigationStyle": "custom"
+}

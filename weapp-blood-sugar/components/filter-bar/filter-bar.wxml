@@ -1,0 +1,23 @@
+<view class="filter-bar">
+  <view class="filter-row">
+    <view class="filter-item">
+      <text class="filter-label">日期从</text>
+      <picker mode="date" value="{{dateFrom}}" bindchange="onDateFromChange">
+        <text class="filter-value">{{dateFrom || '请选择'}}</text>
+      </picker>
+    </view>
+    <view class="filter-item">
+      <text class="filter-label">至</text>
+      <picker mode="date" value="{{dateTo}}" bindchange="onDateToChange">
+        <text class="filter-value">{{dateTo || '请选择'}}</text>
+      </picker>
+    </view>
+    <view class="filter-item">
+      <text class="filter-label">时段</text>
+      <picker mode="selector" range="{{slotOptions}}" value="{{slotIdx + 1}}" bindchange="onSlotChange">
+        <text class="filter-value">{{slotOptions[slotIdx + 1]}}</text>
+      </picker>
+    </view>
+    <button class="btn btn-sm btn-outline" bindtap="onReset">↺ 重置</button>
+  </view>
+</view>

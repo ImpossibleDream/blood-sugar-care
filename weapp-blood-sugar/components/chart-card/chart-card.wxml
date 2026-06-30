@@ -1,0 +1,12 @@
+<view class="card">
+  <view class="card-title">{{title}}</view>
+  <view class="chart-box">
+    <canvas
+      type="2d"
+      id="chartCanvas"
+      class="chart-canvas"
+      style="width:100%;height:420rpx;"
+    ></canvas>
+  </view>
+  <view class="card-note" wx:if="{{note}}">{{note}}</view>
+</view>

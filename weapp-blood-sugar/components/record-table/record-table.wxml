@@ -1,0 +1,39 @@
+<view class="records-wrap">
+  <view class="records-header">共 {{total}} 条记录，显示 {{start+1}}-{{end}} 条</view>
+  <view class="records-scroll">
+    <view class="records-table">
+      <view class="table-head">
+        <view class="th" style="width:180rpx;">日期</view>
+        <view class="th" style="width:160rpx;">时段</view>
+        <view class="th" style="width:140rpx;">数值</view>
+        <view class="th" style="width:100rpx;">标记</view>
+        <view class="th" style="width:180rpx;">操作</view>
+      </view>
+      <view wx:for="{{list}}" wx:key="id" class="table-row">
+        <view class="td" style="width:180rpx;">{{item.date}}</view>
+        <view class="td" style="width:160rpx;">{{item.slotLabel}}</view>
+        <view class="td" style="width:140rpx;">{{item.valueDisplay}}</view>
+        <view class="td" style="width:100rpx;">
+          <text wx:if="{{item.tag == 'high'}}" class="tag-high">偏高</text>
+          <text wx:elif="{{item.tag == 'low'}}" class="tag-low">偏低</text>
+          <text wx:elif="{{item.tag == 'inj'}}" class="tag-inj">注射</text>
+        </view>
+        <view class="td" style="width:180rpx;">
+          <button class="act-btn act-edit" size="mini" bindtap="onEdit" data-item="{{item}}">编辑</button>
+          <button class="act-btn act-del" size="mini" bindtap="onDelete" data-item="{{item}}">删除</button>
+        </view>
+      </view>
+      <view wx:if="{{list.length === 0}}" class="empty-row">
+        <text>暂无匹配记录</text>
+      </view>
+    </view>
+  </view>
+  <view class="pagination" wx:if="{{totalPages > 1}}">
+    <text class="page-btn" bindtap="onPrev" data-disabled="{{page <= 1}}">‹</text>
+    <block wx:for="{{pageButtons}}" wx:key="index">
+      <text class="page-btn {{item.active ? 'page-active' : ''}}" bindtap="onGoPage" data-page="{{item.num}}">{{item.num}}</text>
+    </block>
+    <text class="page-btn" bindtap="onNext" data-disabled="{{page >= totalPages}}">›</text>
+    <text class="page-info">第 {{page}}/{{totalPages}} 页</text>
+  </view>
+</view>

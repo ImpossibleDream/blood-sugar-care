@@ -1,0 +1,69 @@
+<view class="app-page">
+  <view class="app-header" style="padding-top: {{statusBarHeight}}px">
+    <view class="title">📊 健康数据监测 · 运营看板</view>
+    <view class="sub">血糖数据监测系统 · 个人预警阈值版 · 2025.12 — 至今</view>
+  </view>
+  <view class="app-content">
+    <!-- KPI行 -->
+    <view class="kpi-row">
+      <view class="kpi-card" wx:for="{{kpiList}}" wx:key="index">
+        <view class="lab">{{item.label}}</view>
+        <view class="val" style="color: {{item.color}}">{{item.value}}</view>
+        <view class="chg">{{item.change}}</view>
+      </view>
+    </view>
+    <!-- 2列网格布局 -->
+    <view class="db-grid">
+      <!-- 图表1：全宽 -->
+      <view class="card fw">
+        <view class="h3">📈 月度血糖均值趋势</view>
+        <canvas type="2d" id="c1" class="ch"></canvas>
+        <view class="nt">包含凌晨3:00记录，空腹血糖从12月6.37降至5月4.78（↓25%）。</view>
+      </view>
+      <!-- 图表2 -->
+      <view class="card">
+        <view class="h3">⚖️ 双轨预警对比</view>
+        <canvas type="2d" id="c2" class="ch"></canvas>
+        <view class="nt">个人阈值比医学标准（4.4-7.0/&lt;10.0）严格约20-50%。</view>
+      </view>
+      <!-- 图表3 -->
+      <view class="card">
+        <view class="h3">🚦 各时段预警占比（个人阈值）</view>
+        <canvas type="2d" id="c3" class="ch"></canvas>
+        <view class="chart-legend">
+          <view class="legend-item" wx:for="{{donutData}}" wx:key="index" catchtap="onDonutTap" data-index="{{index}}">
+            <view class="legend-color" style="background:{{item.color}}"></view>
+            <text>{{item.label}}</text>
+          </view>
+        </view>
+        <view class="nt" catchtap="onDonutTap" data-index="0">凌晨3:00正常率最高，晚餐前偏高率38.2%。⏺ 点击测试</view>
+      </view>
+      <!-- 图表4 -->
+      <view class="card">
+        <view class="h3">💉 注射剂量 vs 空腹血糖</view>
+        <canvas type="2d" id="c4" class="ch"></canvas>
+        <view class="nt">1.2mg稳定160天，空腹持续低于5.3。</view>
+      </view>
+      <!-- 图表5 -->
+      <view class="card">
+        <view class="h3">📊 各时段血糖分布</view>
+        <canvas type="2d" id="c5" class="ch"></canvas>
+        <view class="nt">凌晨3:00最稳定，早餐后波动最大。</view>
+      </view>
+      <!-- 图表6 -->
+      <view class="card" style="display:flex;flex-direction:column">
+        <view class="h3">⚠️ 极值记录与异常溯源</view>
+        <canvas type="2d" id="c6" class="ch"></canvas>
+        <view class="nt">偏低极值出现在4月下旬，偏高极值集中在初期。</view>
+      </view>
+      <!-- 右侧信息区（4个框） -->
+      <view class="card"><view class="h3">双轨预警设计</view><view class="nt">医学标准（4.4-7.0 / &lt;10.0）：达标率95%。个人预警（3.9-6.1 / 3.9-7.8）：前置识别20-50%。</view></view>
+      <view class="card"><view class="h3">剂量调整数据闭环</view><view class="nt">1.2mg稳定期160天，空腹血糖持续低于5.3。</view></view>
+      <view class="card"><view class="h3">数据采集评估</view><view class="nt">空腹和3:00记录最完整(~85%)，晚餐前仅65%。</view></view>
+      <view class="card"><view class="h3">作品集价值定位</view><view class="nt">双轨预警数据监测系统，半年运营积累1,138条有效数据。</view></view>
+    </view>
+    <view class="dashboard-footer">数据运营作品集 · 2026 · 个人预警阈值版</view>
+    <view class="footer-legal">本系统为个人作品集演示，不涉及真实患者诊疗数据。数据图表仅供参考。</view>
+  </view>
+  <tabs-bar activeIdx="{{tabIdx}}" bind:tabchange="onTabChange" />
+</view>

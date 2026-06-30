@@ -1,0 +1,70 @@
+<!--
+  登录页面 - 双模式登录
+  作品集演示 · 血糖数据监测系统
+  模式1: 微信授权登录
+  模式2: 手机验证码登录
+-->
+<view class="login-page">
+  <view class="login-bg"></view>
+
+  <!-- 顶部装饰区域 -->
+  <view class="login-hero">
+    <view class="hero-icon">💉</view>
+    <view class="hero-title">血糖数据监测系统</view>
+    <view class="hero-sub">个人预警阈值版 · 数据运营看板</view>
+  </view>
+
+  <!-- 登录卡片 -->
+  <view class="login-card">
+    <!-- 模式切换标签 -->
+    <view class="mode-tabs">
+      <view class="mode-tab {{loginMode === 'wechat' ? 'active' : ''}}" bindtap="switchMode" data-mode="wechat">
+        <text class="mode-icon">👤</text>
+        <text>微信授权</text>
+      </view>
+      <view class="mode-tab {{loginMode === 'phone' ? 'active' : ''}}" bindtap="switchMode" data-mode="phone">
+        <text class="mode-icon">📱</text>
+        <text>手机验证码</text>
+      </view>
+    </view>
+
+    <!-- 微信授权模式 -->
+    <block wx:if="{{loginMode === 'wechat'}}">
+      <view class="wechat-info">
+        <image wx:if="{{userAvatar}}" class="wechat-avatar" src="{{userAvatar}}" mode="aspectFill"></image>
+        <view wx:else class="wechat-avatar-placeholder">👤</view>
+        <text class="wechat-nick">{{userNick || '点击授权获取昵称'}}</text>
+      </view>
+      <button class="btn btn-primary login-btn" open-type="getUserInfo" bindgetuserinfo="onWechatLogin">
+        🔗 微信一键登录
+      </button>
+      <view class="login-tip">授权仅获取微信昵称和头像，用于作品集演示</view>
+    </block>
+
+    <!-- 手机验证码模式 -->
+    <block wx:if="{{loginMode === 'phone'}}">
+      <view class="form-group">
+        <text class="phone-label">手机号</text>
+        <input class="form-input phone-input" type="number" maxlength="11" placeholder="请输入手机号"
+          value="{{phoneNumber}}" bindinput="onPhoneInput" />
+      </view>
+      <view class="form-group code-row">
+        <input class="form-input code-input" type="number" maxlength="6" placeholder="验证码"
+          value="{{code}}" bindinput="onCodeInput" />
+        <button class="btn btn-sm {{codeSending ? 'btn-disabled' : 'btn-outline'}} code-btn"
+          disabled="{{codeSending}}" bindtap="sendCode">
+          {{codeBtnText}}
+        </button>
+      </view>
+      <button class="btn btn-primary login-btn" bindtap="onPhoneLogin">
+        🔒 验证并登录
+      </button>
+    </block>
+  </view>
+
+  <!-- 底部合规文案 -->
+  <view class="footer-legal">
+    登录即表示同意《用户服务协议》和《隐私政策》<text></text>
+    本应用为个人作品集演示 · 不涉及真实诊疗数据
+  </view>
+</view>
